@@ -1,0 +1,3 @@
+[submodule "mcps/penpot"]
+	path = mcps/penpot
+	url = git@github.com:penpot/penpot.git
