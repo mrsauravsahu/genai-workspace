@@ -1,1 +1,5 @@
 snippets/
+repos/
+.envrc
+agent.envrc
+
