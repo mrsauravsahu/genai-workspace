@@ -3,73 +3,36 @@ description: Create a one-pager markdown snippet, then optionally publish it to 
 argument-hint: [topic or path-to-snippet.md]
 ---
 
-# /snippet — create a one-pager snippet (and optionally publish to Notion)
+# /snippet — create a one-pager (then optionally publish to Notion)
 
-Primary job: turn a topic (or existing draft) into a clean, self-contained
-**one-pager markdown** file under `snippets/`. Publishing to Notion is a secondary,
-opt-in step you offer only after the markdown is written.
+Primary job: turn a topic (or existing draft) into a clean, self-contained **one-pager**
+under `snippets/`. Publishing to Notion is an opt-in step offered only after the file is
+written.
+
+**One-pager bar:** ≤400 words / ≤60 lines, one H1, ~3–6 tight sections. If you'd scroll
+more than once to read it, cut it down.
 
 ## Input
 
-`$ARGUMENTS` may be:
+`$ARGUMENTS` is a topic to draft, a `snippets/*.md` path to refine, or empty (then ask
+what the snippet is about).
 
-- **A topic / description** — draft a new one-pager about it.
-- **A path to a `.md` file** under `snippets/` — treat it as an existing draft to
-  refine into one-pager shape.
-- **Empty** — ask the user what the snippet should be about (or which existing
-  `snippets/*.md` draft to work from).
+## Part 1 — Create (do first)
 
-## Part 1 — Create the one-pager (do this first)
+1. Draft/refine from the topic; ask the user for facts you don't know rather than inventing.
+2. Shape to the one-pager bar: H1 title, one-line intro, tight sections with bullets and
+   fenced code where useful. Preserve any existing frontmatter (`notion:` / `Link:`).
+3. Write to `snippets/<kebab-case-title>.md` (or overwrite the given path). `snippets/` is
+   gitignored — never lands on GitHub.
+4. Report the path and a one-line summary.
 
-1. **Gather the content.** Draft (or refine) the snippet from the topic/draft. If key
-   facts are unknown, ask the user rather than inventing them.
+## Part 2 — Publish to Notion (ask first)
 
-2. **Shape it as a one-pager.** Keep it to roughly a single page:
-   - An H1 title (used later as the Notion page title).
-   - A short intro/summary line.
-   - Tight sections with headings, bullets, and fenced code blocks where useful.
-   - Preserve any existing frontmatter keys (e.g. `notion:` / `Link:`); do not remove
-     them.
+After saving, **ask whether to publish.** If no, stop. If yes:
 
-3. **Write the file** to `snippets/<kebab-case-title>.md` (or overwrite the given path).
-   Remember `snippets/` is gitignored, so it never lands on GitHub.
-
-4. **Report** the file path and a one-line summary of what was created.
-
-## Part 2 — Offer to publish to Notion (ask first)
-
-After the markdown is saved, **ask the user whether they want to publish it to Notion.**
-If they decline, stop here — the one-pager is the deliverable. If they accept, run the
-sync below.
-
-### Publish steps
-
-1. **Resolve the Notion root.** Read `GENAI_WORKSPACE__NOTION_ROOT_PAGE_URL` from the
-   environment (`printenv GENAI_WORKSPACE__NOTION_ROOT_PAGE_URL`). If it is empty or
-   unset, **stop and ask the user** for the root page URL — do not guess.
-
-2. **Locate the snippets folder.** Using the Notion MCP server, find a child page named
-   **"snippets"** directly under the root page. If it does not exist, create it under the
-   root page.
-
-3. **Check for an existing page.** Read the file's frontmatter. If `Link:` (or `notion:`)
-   is already populated, confirm with the user whether to update that existing Notion page
-   or create a new one.
-
-4. **Push the content.** Create (or update) a Notion page under the snippets folder using
-   the markdown file's H1 as the page title and the body as the page content, via the
-   Notion MCP server.
-
-5. **Record the link.** Write the created/updated Notion page URL into the file's
-   frontmatter as `Link: <url>` (create the `Link:` key if absent, preserving the rest of
-   the frontmatter and body).
-
-6. **Report.** Print the Notion page URL and the file that was updated.
-
-## Notes
-
-- The one-pager markdown is the primary output; Notion publishing is always opt-in.
-- Frontmatter key for the Notion URL is `Link:`. The existing `snippets/` convention in
-  CLAUDE.md also documents a `notion:` field — do not remove other keys.
-- `snippets/` is gitignored, so these files never get pushed to GitHub; Notion is the
-  shared copy.
+1. `printenv GENAI_WORKSPACE__NOTION_ROOT_PAGE_URL`. If empty/unset, ask the user — don't guess.
+2. Via Notion MCP, find the child page **"snippets"** under the root; create it if missing.
+3. If frontmatter `Link:`/`notion:` is set, confirm update-vs-create.
+4. Create/update the page: H1 → page title, body → content.
+5. Write the page URL back as `Link: <url>`, preserving other keys.
+6. Report the URL and file.
