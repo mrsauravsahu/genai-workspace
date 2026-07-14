@@ -30,14 +30,23 @@ ROOT="$(dirname "$FRIDAY_DIR")"
 # (e.g. repos/<name>) to bootstrap a nested repo against the hub instead.
 TARGET="$(cd "${1:-$ROOT}" && pwd)"
 
+# relpath <target-dir> <from-dir> — both absolute, no trailing slash needed.
+relpath() {
+  local target="$1" common="$2" back=""
+  while [ "${target#"$common"/}" = "$target" ] && [ "$common" != "/" ]; do
+    common="$(dirname "$common")"
+    back="../$back"
+  done
+  echo "$back${target#"$common"/}"
+}
+
 # link <link-path-relative-to-TARGET> <subpath-under-.friday>
 link() {
   local link="$1" subpath="$2"
   local linkpath="$TARGET/$link"
   mkdir -p "$(dirname "$linkpath")"
   local dest
-  dest="$(python3 -c "import os,sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))" \
-    "$FRIDAY_DIR/$subpath" "$(dirname "$linkpath")")"
+  dest="$(relpath "$FRIDAY_DIR/$subpath" "$(dirname "$linkpath")")"
 
   if [ -L "$linkpath" ] && [ "$(readlink "$linkpath")" = "$dest" ]; then
     echo "ok    $link -> $dest"
@@ -68,8 +77,12 @@ sync_vendor_symlinks() {
 
   git config -f "$ROOT/.gitmodules" --get-regexp '^submodule\..*\.fridaySymlink$' 2>/dev/null |
   while read -r key sympath; do
+    # git always normalizes config variable names (the last dot-segment) to
+    # lowercase, so match "fridaysymlink" here regardless of how it's
+    # spelled in .gitmodules.
     local repo="${key#submodule.}"
-    repo="$(basename "${repo%.fridaySymlink}")"
+    repo="${repo%.fridaysymlink}"
+    repo="$(basename "$repo")"
     local bucket=skills
     case "$sympath" in commands/*) bucket=commands ;; esac
     local base dest
