@@ -7,15 +7,11 @@ updated: 2026-07-01
 
 *Terminal-first setup driving hosted and local models for varied tasks. Researched mid-2026. Star counts and rankings are snapshots.*
 
-<div style="page-break-after: always;"></div>
-
 ## 1. Goal
 
 - Talk to **hosted** models ([Claude](https://claude.ai), [GPT](https://platform.openai.com), [Gemini](https://gemini.google.com)) *and* **local** models ([Ollama](https://ollama.com)/[llama.cpp](https://github.com/ggerganov/llama.cpp)) through one interface
 - Cover varied tasks — chat, research, refactors, agentic automation, RAG
 - Stay **terminal-first** and **version-controlled**
-
-<div style="page-break-after: always;"></div>
 
 ## 2. Mental model: a stack, not one app
 
@@ -71,8 +67,6 @@ block-beta
 
 Model and harness are independent — swap hosted ↔ local without changing workflow. Spine: **Layer 1 + Layer 2 + Layer 4**. Layer 3 is optional.
 
-<div style="page-break-after: always;"></div>
-
 ## 3. Rubric
 
 **Highest weight: 4, 6, 9. Gates (hard constraints): 7, 8, 11, 13.**
@@ -92,8 +86,6 @@ Model and harness are independent — swap hosted ↔ local without changing wor
 | 11 | Permission / safety controls (plan vs build, sandboxing) |
 | 12 | Task breadth beyond code |
 | **13** | **Model recency (hard gate)** — no weights older than 6 months from current date |
-
-<div style="page-break-after: always;"></div>
 
 ## 4. The landscape, by layer
 
@@ -136,8 +128,6 @@ Ollama ≥ 0.19 (March 2026) uses **Apple's MLX framework** on Apple Silicon —
 Need embeddings or custom quants?                → llama.cpp
 ```
 
-<div style="page-break-after: always;"></div>
-
 ### Layer 2 — Terminal-first agents / harnesses ★
 
 - **[OpenCode](https://opencode.ai)** *(MIT, ~176k stars)* — 75+ providers incl. Ollama, plain-text `opencode.json`, Plan/Build modes, MCP, custom commands as Markdown. **Strongest all-round fit.**
@@ -166,8 +156,6 @@ sandboxNetworkPolicy: none    # none | localhost | unrestricted
 Commands needing network (`npm install`, `curl`) require `sandboxNetworkPolicy: unrestricted`. Prefer that over disabling the sandbox entirely — filesystem isolation is preserved.
 
 Project instructions use `AGENTS.md` — same file as OpenCode, one shared source.
-
-<div style="page-break-after: always;"></div>
 
 ### Layer 3 — Chat / workspace UI (optional)
 
@@ -213,8 +201,6 @@ Use **stdio** for local dev, **[Streamable HTTP](https://modelcontextprotocol.io
 
 **Power pattern:** hosted model for main loop + local Ollama model via MCP for cheap, private subtasks (e.g. git diff summarisation — zero cloud tokens).
 
-<div style="page-break-after: always;"></div>
-
 ## 5. Scored comparison — harness layer
 
 ●●● strong / ●● ok / ● weak
@@ -227,8 +213,6 @@ Use **stdio** for local dev, **[Streamable HTTP](https://modelcontextprotocol.io
 | **[Gemini CLI](https://github.com/google-gemini/gemini-cli)** | ●●● | ●● | ●● | ●●● | ●● Gemini-centric | ●●● OSS | ●●● | ●● code |
 
 Hosted+local + open licence + momentum → **OpenCode**. Strictest sandbox → **Codex CLI**.
-
-<div style="page-break-after: always;"></div>
 
 ## 6. Current setup vs proposed stack
 
@@ -271,8 +255,6 @@ Keep Claude Code. Add [OpenCode](https://opencode.ai) as the local/provider-agno
 
 Migration risk: low. Claude Code stays as-is.
 
-<div style="page-break-after: always;"></div>
-
 ## 7. Recommended blueprint
 
 1. **[Ollama](https://ollama.com)** always-on daemon (`:11434`, MCP-capable). Pull smallest viable tool-calling model.
@@ -281,8 +263,6 @@ Migration risk: low. Claude Code stays as-is.
 4. **Tools:** community [MCP servers](https://modelcontextprotocol.io/servers) for git/filesystem/web; custom tools via [FastMCP](https://github.com/jlowin/fastmcp).
 5. **Config in git:** `AGENTS.md` + `opencode.json` + `~/.claude/settings.json` + command Markdown files + MCP definitions — all plain text in dotfiles.
 6. **Optional:** [Open WebUI](https://openwebui.com) later for a browser surface over the same Ollama backend.
-
-<div style="page-break-after: always;"></div>
 
 ## 8. Organizing skills, commands, and rules across tools
 
@@ -433,8 +413,6 @@ Always use `const` over `let`...
 - Claude Code commands have no cross-tool equivalent — document them in `CLAUDE.md`.
 - MCP server definitions live in each tool's config separately — no shared format yet.
 - Codex CLI sandbox details: `~/.codex/config.yaml` — see §4.1.
-
-<div style="page-break-after: always;"></div>
 
 ## 9. Caveats
 
