@@ -414,7 +414,7 @@ git submodule add <ssh-url> .friday/vendor/<upstream-repo>
 ln -s ../vendor/<upstream-repo>/skills/<skill-name> .friday/skills/<skill-name>
 ```
 
-`vendor/` = unmodified upstream dependencies (submodules). `skills/`, and later `commands/` if the need arises, = the curated, symlinked surface that `bootstrap.sh` wires into each harness's expected path.
+`vendor/` = unmodified upstream dependencies (submodules). `skills/`, and later `commands/` if the need arises, = the curated, symlinked surface that `.friday/init` wires into each harness's expected path.
 
 ### Cursor `.mdc` frontmatter
 

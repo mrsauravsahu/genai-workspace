@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# .friday/bootstrap.sh — ask which AI tooling you use, then symlink the
+# .friday/init — ask which AI tooling you use, then symlink the
 # canonical .friday/ files into the paths each tool reads. Run from the
 # project root:
 #
-#     ./.friday/bootstrap.sh
+#     bash .friday/init
 #
 # The generated links are per-user setup, not project source — they're
 # gitignored (see .gitignore). Idempotent: re-running fixes drifted links.
