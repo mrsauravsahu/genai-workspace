@@ -3,3 +3,12 @@ repos/
 .envrc
 agent.envrc
 
+# .friday/bootstrap.sh generates these as per-user symlinks; .friday/ is
+# the source of truth, not these paths.
+/CLAUDE.md
+/AGENTS.md
+/.cursorrules
+/.mcp.json
+/.claude/skills
+*.bak
+

@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 #
-# .friday/bootstrap.sh — wire the canonical .friday/ files into the paths each
-# harness reads. Run from the project root:
+# .friday/bootstrap.sh — ask which AI tooling you use, then symlink the
+# canonical .friday/ files into the paths each tool reads. Run from the
+# project root:
 #
 #     ./.friday/bootstrap.sh
 #
-# Idempotent: re-running fixes drifted links. Existing real (non-symlink) files
-# are backed up to <file>.bak instead of being overwritten.
+# The generated links are per-user setup, not project source — they're
+# gitignored (see .gitignore). Idempotent: re-running fixes drifted links.
+# Existing real (non-symlink) files are backed up to <file>.bak instead of
+# being overwritten.
 
 set -euo pipefail
 
@@ -36,16 +39,29 @@ link() {
   echo "link  $link -> $target"
 }
 
-# rules.md is the single source of truth for cross-harness instructions.
-link ".friday/rules.md" "CLAUDE.md"      # Claude Code
-link ".friday/rules.md" "AGENTS.md"      # OpenCode, Codex CLI
-link ".friday/rules.md" ".cursorrules"   # Cursor
+ask() {
+  local prompt="$1" reply
+  read -r -p "$prompt [y/N] " reply
+  [[ "$reply" =~ ^[Yy]$ ]]
+}
 
-# MCP server definitions.
-link ".friday/mcp.json" ".mcp.json"      # Claude Code
+echo "Which AI tooling do you use in this project?"
+echo
 
-# Skills: Claude Code reads .claude/skills/<name>/.
-mkdir -p .claude
-link "../.friday/skills" ".claude/skills"
+if ask "Claude Code?"; then
+  link ".friday/rules.md" "CLAUDE.md"
+  link ".friday/mcp.json" ".mcp.json"
+  mkdir -p .claude
+  link "../.friday/skills" ".claude/skills"
+fi
 
+if ask "Cursor?"; then
+  link ".friday/rules.md" ".cursorrules"
+fi
+
+if ask "Codex CLI / OpenCode (AGENTS.md)?"; then
+  link ".friday/rules.md" "AGENTS.md"
+fi
+
+echo
 echo "done. bootstrap complete."
