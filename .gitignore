@@ -10,5 +10,6 @@ agent.envrc
 /.cursorrules
 /.mcp.json
 /.claude/skills
+/.claude/commands
 *.bak
 

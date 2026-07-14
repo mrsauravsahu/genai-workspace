@@ -53,6 +53,7 @@ if ask "Claude Code?"; then
   link ".friday/mcp.json" ".mcp.json"
   mkdir -p .claude
   link "../.friday/skills" ".claude/skills"
+  link "../.friday/commands" ".claude/commands"
 fi
 
 if ask "Cursor?"; then
