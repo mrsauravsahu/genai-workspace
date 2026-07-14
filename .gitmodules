@@ -5,3 +5,13 @@
 	path = .friday/vendor/vercel-skills
 	url = git@github.com:vercel-labs/skills.git
 	shallow = true
+[submodule ".friday/vendor/ponytail"]
+	path = .friday/vendor/ponytail
+	url = git@github.com:DietrichGebert/ponytail.git
+	shallow = true
+	fridaySymlink = skills/ponytail
+	fridaySymlink = skills/ponytail-audit
+	fridaySymlink = skills/ponytail-debt
+	fridaySymlink = skills/ponytail-gain
+	fridaySymlink = skills/ponytail-help
+	fridaySymlink = skills/ponytail-review
