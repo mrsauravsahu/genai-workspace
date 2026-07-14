@@ -21,3 +21,5 @@ agent.envrc
 /.friday/commands/*
 !/.friday/commands/friday-*
 
+.friday/**/*.pdf
+.pdf
