@@ -26,6 +26,11 @@ from parakeet_mlx import from_pretrained
 SOCK_PATH = os.path.expanduser("~/.ptt-tmux.sock")
 SAMPLE_RATE = 16000
 POLL_INTERVAL = 1.0  # seconds between incremental re-transcriptions
+# RMS (float32, 0-1 scale) below which newly captured audio is treated as
+# silence and skipped, to avoid running the model on dead air. Override
+# with the PTT_VOLUME_THRESHOLD env var if the default is too
+# sensitive/insensitive for your mic.
+VOLUME_THRESHOLD = float(os.environ.get("PTT_VOLUME_THRESHOLD", "0.01"))
 
 state_lock = threading.Lock()
 recording = False
@@ -33,6 +38,7 @@ frames = []
 stream = None
 target_pane = None
 typed_words = []  # words already sent to the pane for the current utterance
+checked_len = 0  # sample count already considered by the last poll
 
 
 def log(msg):
@@ -54,11 +60,26 @@ def inject(pane, text):
         log(f"tmux send-keys failed: {e}")
 
 
-def transcribe_current(model):
+def set_pane_recording_indicator(pane, on):
+    if not pane:
+        return
+    args = ["tmux", "set", "-p", "-t", pane]
+    args += ["pane-border-style", "fg=red"] if on else ["-u", "pane-border-style"]
+    try:
+        subprocess.run(args, check=True)
+    except subprocess.CalledProcessError as e:
+        log(f"tmux set pane-border-style failed: {e}")
+
+
+def transcribe_current(model, force=False):
     """Transcribe whatever audio has been captured so far and type any
     words not already typed for this utterance. Must run on the main
-    thread (the thread the model was loaded on)."""
-    global typed_words
+    thread (the thread the model was loaded on).
+
+    Unless `force` (used for the final pass on stop), polls where the
+    newly captured audio is below VOLUME_THRESHOLD are skipped so we
+    don't burn a transcription pass on dead air."""
+    global typed_words, checked_len
     with state_lock:
         chunks = frames.copy()
         pane = target_pane
@@ -67,6 +88,16 @@ def transcribe_current(model):
     audio = np.concatenate(chunks, axis=0).flatten()
     if len(audio) < SAMPLE_RATE // 4:
         return  # too little audio yet to bother
+
+    new_audio = audio[checked_len:]
+    if (
+        not force
+        and new_audio.size
+        and np.sqrt(np.mean(np.square(new_audio))) < VOLUME_THRESHOLD
+    ):
+        return  # newly captured audio is silence; skip this poll's transcription
+    checked_len = len(audio)
+
     pcm16 = np.clip(audio * 32767, -32768, 32767).astype(np.int16)
     with tempfile.NamedTemporaryFile(suffix=".wav") as f:
         with wave.open(f.name, "wb") as wf:
@@ -92,12 +123,13 @@ def transcribe_current(model):
 
 
 def start_recording(pane, device=None):
-    global recording, frames, stream, target_pane, typed_words
+    global recording, frames, stream, target_pane, typed_words, checked_len
     with state_lock:
         recording = True
         frames = []
         target_pane = pane
         typed_words = []
+        checked_len = 0
     stream = sd.InputStream(
         samplerate=SAMPLE_RATE,
         channels=1,
@@ -106,6 +138,7 @@ def start_recording(pane, device=None):
         callback=audio_callback,
     )
     stream.start()
+    set_pane_recording_indicator(pane, True)
     log(f"recording started (pane={pane}, device={device!r})")
 
 
@@ -113,11 +146,13 @@ def stop_recording(model):
     global recording, stream
     with state_lock:
         recording = False
+        pane = target_pane
     if stream is not None:
         stream.stop()
         stream.close()
     # final pass to catch any trailing words missed since the last poll
-    transcribe_current(model)
+    transcribe_current(model, force=True)
+    set_pane_recording_indicator(pane, False)
     log("recording stopped")
 
 
@@ -165,6 +200,10 @@ def main():
                     last_poll = time.monotonic()
             elif cmd == "ping":
                 conn.sendall(b"ok")
+            elif cmd == "status":
+                with state_lock:
+                    is_recording = recording
+                conn.sendall(b"recording" if is_recording else b"idle")
 
         # if a request came in before the poll interval elapsed while
         # recording, catch up on transcription now
