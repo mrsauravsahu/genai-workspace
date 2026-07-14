@@ -396,6 +396,26 @@ project-b/.friday/               ← project-specific override
 
 This keeps the convention project-level (every tool sees `.friday` in the repo root) while a single symlink makes the setup global with zero per-project maintenance.
 
+### Vendoring third-party skills via `.friday/vendor/`
+
+Some skills live inside a third-party monorepo alongside unrelated code — a git submodule can't check out just one subdirectory, so the whole repo has to be cloned. `.friday/vendor/` holds these raw upstream clones as git submodules; `.friday/skills/` symlinks in only the specific skill that's wanted, keeping the harness-facing directory clean:
+
+```
+.friday/
+├── vendor/
+│   └── <upstream-repo>/            # git submodule, full upstream repo
+│       └── skills/<skill-name>/SKILL.md
+└── skills/
+    └── <skill-name> -> ../vendor/<upstream-repo>/skills/<skill-name>
+```
+
+```bash
+git submodule add <ssh-url> .friday/vendor/<upstream-repo>
+ln -s ../vendor/<upstream-repo>/skills/<skill-name> .friday/skills/<skill-name>
+```
+
+`vendor/` = unmodified upstream dependencies (submodules). `skills/`, and later `commands/` if the need arises, = the curated, symlinked surface that `.friday/init` wires into each harness's expected path.
+
 ### Cursor `.mdc` frontmatter
 
 ```markdown

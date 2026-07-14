@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+#
+# .friday/init — ask which AI tooling you use, then symlink the
+# canonical .friday/ files into the paths each tool reads. Run from the
+# project root:
+#
+#     bash .friday/init
+#
+# The generated links are per-user setup, not project source — they're
+# gitignored (see .gitignore). Idempotent: re-running fixes drifted links.
+# Existing real (non-symlink) files are backed up to <file>.bak instead of
+# being overwritten.
+
+set -euo pipefail
+
+# Resolve project root as the parent of this script's directory.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(dirname "$SCRIPT_DIR")"
+cd "$ROOT"
+
+# link <target-under-.friday> <link-path-at-root>
+link() {
+  local target="$1" link="$2"
+
+  # Already the correct symlink? Nothing to do.
+  if [ -L "$link" ] && [ "$(readlink "$link")" = "$target" ]; then
+    echo "ok    $link -> $target"
+    return
+  fi
+
+  # A real file/dir sits here — back it up before replacing.
+  if [ -e "$link" ] && [ ! -L "$link" ]; then
+    mv "$link" "$link.bak"
+    echo "backup $link -> $link.bak"
+  fi
+
+  rm -f "$link"
+  ln -s "$target" "$link"
+  echo "link  $link -> $target"
+}
+
+ask() {
+  local prompt="$1" reply
+  read -r -p "$prompt [y/N] " reply
+  [[ "$reply" =~ ^[Yy]$ ]]
+}
+
+echo "Which AI tooling do you use in this project?"
+echo
+
+if ask "Claude Code?"; then
+  link ".friday/rules.md" "CLAUDE.md"
+  link ".friday/mcp.json" ".mcp.json"
+  mkdir -p .claude
+  link "../.friday/skills" ".claude/skills"
+fi
+
+if ask "Cursor?"; then
+  link ".friday/rules.md" ".cursorrules"
+fi
+
+if ask "Codex CLI / OpenCode (AGENTS.md)?"; then
+  link ".friday/rules.md" "AGENTS.md"
+fi
+
+echo
+echo "done. bootstrap complete."
