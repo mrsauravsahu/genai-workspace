@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
 #
-# .friday/init — ask which AI tooling you use, then symlink the
-# canonical .friday/ files into the paths each tool reads. Run from the
-# project root:
+# .friday/init — regenerate vendor skill/command symlinks from .gitmodules,
+# then ask which AI tooling you use and symlink the canonical .friday/ files
+# into the paths each tool reads.
+#
+# Run from the hub project root to bootstrap it:
 #
 #     bash .friday/init
+#
+# Run with a target dir to wire up another repo (e.g. one cloned under
+# repos/<name>) to this hub's shared .friday/ instead of creating its own:
+#
+#     bash .friday/init repos/<name>
 #
 # The generated links are per-user setup, not project source — they're
 # gitignored (see .gitignore). Idempotent: re-running fixes drifted links.
@@ -13,30 +20,64 @@
 
 set -euo pipefail
 
-# Resolve project root as the parent of this script's directory.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(dirname "$SCRIPT_DIR")"
-cd "$ROOT"
+# The hub is wherever this script physically lives — vendor symlinks and
+# .friday/skills, .friday/commands always live here, regardless of which
+# directory we're wiring tooling paths into.
+FRIDAY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(dirname "$FRIDAY_DIR")"
 
-# link <target-under-.friday> <link-path-at-root>
+# Directory to wire tooling paths into. Defaults to the hub; pass a path
+# (e.g. repos/<name>) to bootstrap a nested repo against the hub instead.
+TARGET="$(cd "${1:-$ROOT}" && pwd)"
+
+# link <link-path-relative-to-TARGET> <subpath-under-.friday>
 link() {
-  local target="$1" link="$2"
+  local link="$1" subpath="$2"
+  local linkpath="$TARGET/$link"
+  mkdir -p "$(dirname "$linkpath")"
+  local dest
+  dest="$(python3 -c "import os,sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))" \
+    "$FRIDAY_DIR/$subpath" "$(dirname "$linkpath")")"
 
-  # Already the correct symlink? Nothing to do.
-  if [ -L "$link" ] && [ "$(readlink "$link")" = "$target" ]; then
-    echo "ok    $link -> $target"
+  if [ -L "$linkpath" ] && [ "$(readlink "$linkpath")" = "$dest" ]; then
+    echo "ok    $link -> $dest"
     return
   fi
 
   # A real file/dir sits here — back it up before replacing.
-  if [ -e "$link" ] && [ ! -L "$link" ]; then
-    mv "$link" "$link.bak"
+  if [ -e "$linkpath" ] && [ ! -L "$linkpath" ]; then
+    mv "$linkpath" "$linkpath.bak"
     echo "backup $link -> $link.bak"
   fi
 
-  rm -f "$link"
-  ln -s "$target" "$link"
-  echo "link  $link -> $target"
+  rm -f "$linkpath"
+  ln -s "$dest" "$linkpath"
+  echo "link  $link -> $dest"
+}
+
+# Regenerate .friday/skills/* and .friday/commands/* from every
+# `fridaySymlink = <path>` entry in .gitmodules (see
+# .friday/commands/friday-install.md). `git submodule add` always names a
+# submodule after its path, so the repo name is the basename of the key's
+# submodule path. The declared path's first component (skills/ or
+# commands/) picks the bucket; its basename becomes the link name. These are
+# pure generated links, so always safe to overwrite outright.
+sync_vendor_symlinks() {
+  [ -f "$ROOT/.gitmodules" ] || return 0
+  mkdir -p "$FRIDAY_DIR/skills" "$FRIDAY_DIR/commands"
+
+  git config -f "$ROOT/.gitmodules" --get-regexp '^submodule\..*\.fridaySymlink$' 2>/dev/null |
+  while read -r key sympath; do
+    local repo="${key#submodule.}"
+    repo="$(basename "${repo%.fridaySymlink}")"
+    local bucket=skills
+    case "$sympath" in commands/*) bucket=commands ;; esac
+    local base dest
+    base="$(basename "$sympath")"
+    dest="../vendor/$repo/$sympath"
+    ln -sfn "$dest" "$FRIDAY_DIR/$bucket/$base"
+    echo "link  .friday/$bucket/$base -> $dest"
+  done
 }
 
 ask() {
@@ -45,23 +86,25 @@ ask() {
   [[ "$reply" =~ ^[Yy]$ ]]
 }
 
-echo "Which AI tooling do you use in this project?"
+sync_vendor_symlinks
+
+echo
+echo "Which AI tooling do you use in $TARGET?"
 echo
 
 if ask "Claude Code?"; then
-  link ".friday/rules.md" "CLAUDE.md"
-  link ".friday/mcp.json" ".mcp.json"
-  mkdir -p .claude
-  link "../.friday/skills" ".claude/skills"
-  link "../.friday/commands" ".claude/commands"
+  link "CLAUDE.md" "rules.md"
+  link ".mcp.json" "mcp.json"
+  link ".claude/skills" "skills"
+  link ".claude/commands" "commands"
 fi
 
 if ask "Cursor?"; then
-  link ".friday/rules.md" ".cursorrules"
+  link ".cursorrules" "rules.md"
 fi
 
 if ask "Codex CLI / OpenCode (AGENTS.md)?"; then
-  link ".friday/rules.md" "AGENTS.md"
+  link "AGENTS.md" "rules.md"
 fi
 
 echo
