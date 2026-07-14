@@ -40,13 +40,13 @@ relpath() {
   echo "$back${target#"$common"/}"
 }
 
-# link <link-path-relative-to-TARGET> <subpath-under-.friday>
+# link <target-under-.friday, e.g. ".friday/rules.md"> <link-path-relative-to-TARGET>
 link() {
-  local link="$1" subpath="$2"
+  local target="$1" link="$2"
   local linkpath="$TARGET/$link"
   mkdir -p "$(dirname "$linkpath")"
   local dest
-  dest="$(relpath "$FRIDAY_DIR/$subpath" "$(dirname "$linkpath")")"
+  dest="$(relpath "$ROOT/$target" "$(dirname "$linkpath")")"
 
   if [ -L "$linkpath" ] && [ "$(readlink "$linkpath")" = "$dest" ]; then
     echo "ok    $link -> $dest"
@@ -106,18 +106,18 @@ echo "Which AI tooling do you use in $TARGET?"
 echo
 
 if ask "Claude Code?"; then
-  link "CLAUDE.md" "rules.md"
-  link ".mcp.json" "mcp.json"
-  link ".claude/skills" "skills"
-  link ".claude/commands" "commands"
+  link ".friday/rules.md" "CLAUDE.md"
+  link ".friday/mcp.json" ".mcp.json"
+  link ".friday/skills" ".claude/skills"
+  link ".friday/commands" ".claude/commands"
 fi
 
 if ask "Cursor?"; then
-  link ".cursorrules" "rules.md"
+  link ".friday/rules.md" ".cursorrules"
 fi
 
 if ask "Codex CLI / OpenCode (AGENTS.md)?"; then
-  link "AGENTS.md" "rules.md"
+  link ".friday/rules.md" "AGENTS.md"
 fi
 
 echo
