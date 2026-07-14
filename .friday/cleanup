@@ -18,6 +18,7 @@ LINKS=(
   "CLAUDE.md"
   ".mcp.json"
   ".claude/skills"
+  ".claude/commands"
   ".cursorrules"
   "AGENTS.md"
 )
