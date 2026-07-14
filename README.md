@@ -57,7 +57,7 @@ Skills are Markdown (`SKILL.md`) directories. Two ways to add one:
 
 ### Adding a command
 
-Commands are Claude Code–formatted Markdown under `.friday/commands/`, e.g. `.friday/commands/snippet.md`:
+Commands are Claude Code–formatted Markdown under `.friday/commands/`, e.g. `.friday/commands/friday-snippet.md`:
 
 ```markdown
 ---
@@ -65,8 +65,10 @@ description: One-line description shown in the command list
 argument-hint: [optional hint for $ARGUMENTS]
 ---
 
-Command body — instructions Claude Code follows when you run /snippet.
+Command body — instructions Claude Code follows when you run /friday-snippet.
 ```
+
+One example already in the repo: `/friday-snippet` turns a topic into a one-pager under `snippets/` (gitignored, never pushed).
 
 `.friday/init` symlinks `.friday/commands` → `.claude/commands`, so any file added here becomes a `/name` slash command in Claude Code automatically. **No cross-tool equivalent exists yet** — Cursor and other harnesses use different formats, so commands only work in Claude Code today.
 
