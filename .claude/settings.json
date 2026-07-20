@@ -4,8 +4,5 @@
       "Read(//home/mrsauravsahu/GenAI-Workspace/.envrc)",
       "Read(./.envrc)"
     ]
-  },
-  "worktree": {
-    "bgIsolation": "none"
   }
 }
