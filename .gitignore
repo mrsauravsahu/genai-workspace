@@ -23,3 +23,5 @@ agent.envrc
 
 .friday/**/*.pdf
 .pdf
+.DS_Store
+
