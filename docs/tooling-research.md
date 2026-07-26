@@ -10,7 +10,7 @@ updated: 2026-07-01
 ## 1. Goal
 
 - Talk to **hosted** models ([Claude](https://claude.ai), [GPT](https://platform.openai.com), [Gemini](https://gemini.google.com)) *and* **local** models ([Ollama](https://ollama.com)/[llama.cpp](https://github.com/ggerganov/llama.cpp)) through one interface
-- Cover varied tasks — chat, research, refactors, agentic automation, RAG
+- Cover varied tasks: chat, research, refactors, agentic automation, RAG
 - Stay **terminal-first** and **version-controlled**
 
 ## 2. Mental model: a stack, not one app
@@ -65,7 +65,7 @@ block-beta
 | **3. Chat / workspace UI** | Conversational front-end, RAG, history | [Open WebUI](https://openwebui.com), [LibreChat](https://librechat.ai), [AnythingLLM](https://anythingllm.com), [Msty](https://msty.app) |
 | **4. Tool / extension protocol** | Give models "hands and feet" | [MCP](https://modelcontextprotocol.io) + [FastMCP](https://github.com/jlowin/fastmcp) |
 
-Model and harness are independent — swap hosted ↔ local without changing workflow. Spine: **Layer 1 + Layer 2 + Layer 4**. Layer 3 is optional.
+Model and harness are independent, so you can swap hosted ↔ local without changing workflow. Spine: **Layer 1 + Layer 2 + Layer 4**. Layer 3 is optional.
 
 ## 3. Rubric
 
@@ -76,7 +76,7 @@ Model and harness are independent — swap hosted ↔ local without changing wor
 | 1 | Ease of setup |
 | 2 | Mac + Linux support |
 | 3 | Config in VCS / git |
-| **4** | **Agents, tools, MCP — easy to build your own** |
+| **4** | **Agents, tools, MCP: easy to build your own** |
 | 5 | Terminal-first |
 | **6** | **Model & provider flexibility** (hosted+local, switchable per task) |
 | 7 | License / lock-in (OSI vs source-available vs proprietary) |
@@ -85,42 +85,42 @@ Model and harness are independent — swap hosted ↔ local without changing wor
 | 10 | Headless / scriptable / CI-friendly |
 | 11 | Permission / safety controls (plan vs build, sandboxing) |
 | 12 | Task breadth beyond code |
-| **13** | **Model recency (hard gate)** — no weights older than 6 months from current date |
+| **13** | **Model recency (hard gate):** no weights older than 6 months from current date |
 
 ## 4. The landscape, by layer
 
-### Layer 1 — Local inference / serving
+### Layer 1: local inference and serving
 
 All consumer runners wrap [llama.cpp](https://github.com/ggerganov/llama.cpp) / MLX. Raw speed is within a few percent on the same hardware. Choose on interface, API behaviour, and MCP/tool support.
 
-> **Gate 13 — model recency:** use weights released within the last 6 months only. Older models have degraded tool-calling adherence — the main cause of agentic loops stalling. Compliant picks as of 2026-06-28: **gemma4**, **qwen3.5-series**, **granite4.1**. Re-audit quarterly at [ollama.com/library?sort=newest](https://ollama.com/library?sort=newest).
+> **Gate 13, model recency:** use weights released within the last 6 months only. Older models have degraded tool-calling adherence, which is the main cause of agentic loops stalling. Compliant picks as of 2026-06-28: **gemma4**, **qwen3.5-series**, **granite4.1**. Re-audit quarterly at [ollama.com/library?sort=newest](https://ollama.com/library?sort=newest).
 
 **Runners:**
 
-- **[Ollama](https://ollama.com)** — Go binary, background daemon, OpenAI-compat on `:11434`, MIT. Only runner with **first-class MCP**. **Default pick.**
-- **[llama.cpp](https://github.com/ggerganov/llama.cpp)** — underlying engine. Use directly for exotic quants, embedding servers, or 8–16 GB Macs where Ollama's MLX path is unavailable.
-- **[LM Studio](https://lmstudio.ai)** — polished GUI, HuggingFace browser, OpenAI-compat on `:1234`. Closed-source; no MCP; server dies when app closes.
-- **[Jan](https://jan.ai)** — open-source, fully offline, API on `:1337`. Gaps in OpenAI-style **function calling** — test before committing.
-- **[vLLM](https://github.com/vllm-project/vllm)** — high-throughput production serving. Linux/remote GPU only.
-- **[LocalAI](https://localai.io)** — full OpenAI drop-in, multimodal, mature function calling.
+- **[Ollama](https://ollama.com)**: Go binary, background daemon, OpenAI-compat on `:11434`, MIT. The only runner with first-class MCP. **Default pick.**
+- **[llama.cpp](https://github.com/ggerganov/llama.cpp)**: underlying engine. Use directly for exotic quants, embedding servers, or 8-16 GB Macs where Ollama's MLX path is unavailable.
+- **[LM Studio](https://lmstudio.ai)**: polished GUI, HuggingFace browser, OpenAI-compat on `:1234`. Closed-source, no MCP, and the server dies when the app closes.
+- **[Jan](https://jan.ai)**: open-source, fully offline, API on `:1337`. Has gaps in OpenAI-style function calling, so test before committing.
+- **[vLLM](https://github.com/vllm-project/vllm)**: high-throughput production serving. Linux/remote GPU only.
+- **[LocalAI](https://localai.io)**: full OpenAI drop-in, multimodal, mature function calling.
 
 #### Ollama vs llama.cpp direct (macOS)
 
-Ollama ≥ 0.19 (March 2026) uses **Apple's MLX framework** on Apple Silicon — faster than llama.cpp on 32 GB+ Macs. Falls back to GGML/Metal on 8/16 GB.
+Ollama ≥ 0.19 (March 2026) uses Apple's MLX framework on Apple Silicon, which is faster than llama.cpp on 32 GB+ Macs. It falls back to GGML/Metal on 8/16 GB.
 
 | | Ollama ≥ 0.19 (MLX) | llama.cpp (GGML/Metal) |
 |---|---|---|
 | **macOS backend** | MLX (Apple-native) | GGML + Metal |
 | **Model format** | MLX safetensors (`:mlx` tags) or GGUF | GGUF (quantized) |
 | **Setup** | `brew install ollama` | Build from source |
-| **Decode speed (8B, M2 Pro)** | 80–112 tok/s | 40–55 tok/s |
+| **Decode speed (8B, M2 Pro)** | 80-112 tok/s | 40-55 tok/s |
 | **RAM requirement** | 32 GB+ for MLX; falls back on less | 8 GB+ |
 | **Model management** | `ollama pull` | Manual |
 | **Custom quant** | Limited | Full (Q2_K through F16) |
 | **MCP / API** | First-class MCP, `:11434` | `:8080` via `llama-server` |
 | **Best for** | Fast zero-config local API | Custom quants, embedding servers, 8/16 GB Macs |
 
-**Quantization sweet spot:** Q4_K_M — ~5 GB for 8B, good daily-use quality.
+**Quantization sweet spot:** Q4_K_M, about 5 GB for 8B, with good daily-use quality.
 
 ```
 32 GB+ Mac, zero-config?                         → Ollama (MLX, pull :mlx tags)
@@ -128,16 +128,16 @@ Ollama ≥ 0.19 (March 2026) uses **Apple's MLX framework** on Apple Silicon —
 Need embeddings or custom quants?                → llama.cpp
 ```
 
-### Layer 2 — Terminal-first agents / harnesses ★
+### Layer 2: terminal-first agents and harnesses ★
 
-- **[OpenCode](https://opencode.ai)** *(MIT, ~176k stars)* — 75+ providers incl. Ollama, plain-text `opencode.json`, Plan/Build modes, MCP, custom commands as Markdown. **Strongest all-round fit.**
-- **[Claude Code](https://claude.ai/code)** *(Anthropic, premium)* — elite reasoning, large context, #2 Terminal-Bench 2.1. Anthropic-only. Strong MCP + subagent story.
-- **[Codex CLI](https://github.com/openai/codex)** *(OpenAI, OSS)* — **OS-level sandbox by default**, #1 Terminal-Bench 2.1. OpenAI-only. See §4.1.
-- **[Gemini CLI](https://github.com/google-gemini/gemini-cli)** *(Google, OSS)* — **generous free tier**, 1M-token context, Plan Mode. Gemini-centric.
+- **[OpenCode](https://opencode.ai)** *(MIT, ~176k stars)*: 75+ providers including Ollama, plain-text `opencode.json`, Plan/Build modes, MCP, custom commands as Markdown. **Strongest all-round fit.**
+- **[Claude Code](https://claude.ai/code)** *(Anthropic, premium)*: strong reasoning, large context, #2 Terminal-Bench 2.1. Anthropic-only. Good MCP and subagent support.
+- **[Codex CLI](https://github.com/openai/codex)** *(OpenAI, OSS)*: OS-level sandbox by default, #1 Terminal-Bench 2.1. OpenAI-only. See §4.1.
+- **[Gemini CLI](https://github.com/google-gemini/gemini-cli)** *(Google, OSS)*: large free tier, 1M-token context, Plan Mode. Gemini-centric.
 
-#### §4.1 — Codex CLI sandbox execution
+#### §4.1 Codex CLI sandbox execution
 
-Every shell command runs inside an OS-level sandbox by default — no network, read-only filesystem outside the working directory.
+Every shell command runs inside an OS-level sandbox by default: no network, and a read-only filesystem outside the working directory.
 
 ```yaml
 # ~/.codex/config.yaml
@@ -153,20 +153,20 @@ sandboxNetworkPolicy: none    # none | localhost | unrestricted
 | `on-failure` | Asks only on non-zero exit |
 | `never` | Asks before every command |
 
-Commands needing network (`npm install`, `curl`) require `sandboxNetworkPolicy: unrestricted`. Prefer that over disabling the sandbox entirely — filesystem isolation is preserved.
+Commands needing network (`npm install`, `curl`) require `sandboxNetworkPolicy: unrestricted`. Prefer that over disabling the sandbox entirely, since filesystem isolation is preserved.
 
-Project instructions use `AGENTS.md` — same file as OpenCode, one shared source.
+Project instructions use `AGENTS.md`, the same file as OpenCode, so there's one shared source.
 
-### Layer 3 — Chat / workspace UI (optional)
+### Layer 3: chat and workspace UI (optional)
 
-- **[Open WebUI](https://openwebui.com)** — private ChatGPT stack, team accounts/SSO
-- **[LibreChat](https://librechat.ai)** — multi-model, plugins, Azure/OpenAI/local
-- **[AnythingLLM](https://anythingllm.com)** — built-in RAG
-- **[Msty](https://msty.app)** — engine manager + chat
+- **[Open WebUI](https://openwebui.com)**: private ChatGPT stack, team accounts/SSO
+- **[LibreChat](https://librechat.ai)**: multi-model, plugins, Azure/OpenAI/local
+- **[AnythingLLM](https://anythingllm.com)**: built-in RAG
+- **[Msty](https://msty.app)**: engine manager and chat
 
-### Layer 4 — Tool protocols: MCP and alternatives
+### Layer 4: tool protocols, MCP and alternatives
 
-[MCP](https://modelcontextprotocol.io) decouples tool capability from agent identity — one server works across OpenCode, Claude Code, Codex CLI, etc. Ecosystem: ~13k servers.
+[MCP](https://modelcontextprotocol.io) decouples tool capability from agent identity, so one server works across OpenCode, Claude Code, Codex CLI, etc. Ecosystem: ~13k servers.
 
 #### Alternatives to MCP
 
@@ -199,9 +199,9 @@ if __name__ == "__main__":
 
 Use **stdio** for local dev, **[Streamable HTTP](https://modelcontextprotocol.io/docs/concepts/transports)** for remote. SSE transport deprecated 2026.
 
-**Power pattern:** hosted model for main loop + local Ollama model via MCP for cheap, private subtasks (e.g. git diff summarisation — zero cloud tokens).
+**Power pattern:** hosted model for the main loop plus a local Ollama model via MCP for cheap, private subtasks (e.g. git diff summarisation, which costs zero cloud tokens).
 
-## 5. Scored comparison — harness layer
+## 5. Scored comparison of the harness layer
 
 ●●● strong / ●● ok / ● weak
 
@@ -221,7 +221,7 @@ Hosted+local + open licence + momentum → **OpenCode**. Strictest sandbox → *
 | Layer | What's running | Notes |
 |---|---|---|
 | Inference | [Ollama](https://ollama.com) (occasional) | Simple/fast tasks only |
-| Harness | [Claude Code](https://claude.ai/code) | Primary — subscription, no API key |
+| Harness | [Claude Code](https://claude.ai/code) | Primary; subscription, no API key |
 | Models | Claude hosted (Sonnet/Opus) | Ollama fallback for low-stakes tasks |
 | Config | `~/.claude/settings.json` | Git-trackable |
 | Tools/MCP | Ad-hoc | No systematic setup yet |
@@ -232,21 +232,21 @@ Hosted+local + open licence + momentum → **OpenCode**. Strictest sandbox → *
 
 | Criterion | Gap |
 |---|---|
-| **6 — Model flexibility** | Locked to Anthropic |
-| **7 — License** | Proprietary; no OSI fallback |
-| **8 — Privacy/offline** | Every token leaves the machine |
-| **10 — Headless/CI** | `--print` flag exists but not CI-native |
-| **12 — Task breadth** | Code-first by design |
+| **6, model flexibility** | Locked to Anthropic |
+| **7, license** | Proprietary; no OSI fallback |
+| **8, privacy/offline** | Every token leaves the machine |
+| **10, headless/CI** | `--print` flag exists but is not CI-native |
+| **12, task breadth** | Code-first by design |
 
 ### Add OpenCode alongside Claude Code
 
 Keep Claude Code. Add [OpenCode](https://opencode.ai) as the local/provider-agnostic layer.
 
-**The loop-exit problem with OpenCode + Ollama is a model problem, not OpenCode's.** Common first picks (`llama3.2`, `qwen2.5-coder:7b`, older Mistral) weren't trained for agentic tool-call loops. Fix: Gate 13 — post-Jan 2026 weights only.
+**The loop-exit problem with OpenCode + Ollama is a model problem, not OpenCode's.** Common first picks (`llama3.2`, `qwen2.5-coder:7b`, older Mistral) weren't trained for agentic tool-call loops. Fix: Gate 13, post-Jan 2026 weights only.
 
 | | Claude Code only | + OpenCode |
 |---|---|---|
-| Simple/fast tasks | Hosted Claude — costs tokens | Local model — free |
+| Simple/fast tasks | Hosted Claude, costs tokens | Local model, free |
 | Private context | Leaves machine | Stays on machine |
 | Complex reasoning | Strong | Unchanged |
 | Offline | None | Full (local tasks) |
@@ -261,7 +261,7 @@ Migration risk: low. Claude Code stays as-is.
 2. **Local models (Gate 13, audited 2026-06-28):** `qwen3.5:9b` (~6 GB) default; `granite4.1:3b` (~2 GB) if sluggish; `gemma4:12b` only if quality demands. No models >12B on a daily-use machine.
 3. **[OpenCode](https://opencode.ai)** as primary harness. Configure hosted key (Claude/GPT/Gemini) + local Ollama endpoint; switch per task.
 4. **Tools:** community [MCP servers](https://modelcontextprotocol.io/servers) for git/filesystem/web; custom tools via [FastMCP](https://github.com/jlowin/fastmcp).
-5. **Config in git:** `AGENTS.md` + `opencode.json` + `~/.claude/settings.json` + command Markdown files + MCP definitions — all plain text in dotfiles.
+5. **Config in git:** `AGENTS.md`, `opencode.json`, `~/.claude/settings.json`, command Markdown files, and MCP definitions, all plain text in dotfiles.
 6. **Optional:** [Open WebUI](https://openwebui.com) later for a browser surface over the same Ollama backend.
 
 ## 8. Organizing skills, commands, and rules across tools
@@ -274,7 +274,7 @@ Each harness reads from its own directory. Symlinks and shared files keep one so
 |---|---|---|---|
 | **[Claude Code](https://claude.ai/code)** | `CLAUDE.md` | `.claude/commands/*.md` | `~/.claude/settings.json` |
 | **[OpenCode](https://opencode.ai)** | `AGENTS.md` | `.opencode/` | `opencode.json` |
-| **[Codex CLI](https://github.com/openai/codex)** | `AGENTS.md` | — | `~/.codex/config.yaml` |
+| **[Codex CLI](https://github.com/openai/codex)** | `AGENTS.md` | none | `~/.codex/config.yaml` |
 | **[Cursor](https://cursor.sh)** | `.cursorrules` or `.cursor/rules/*.mdc` | `.cursor/rules/*.mdc` | `.cursor/` |
 
 ### Recommended layout
@@ -316,22 +316,22 @@ claude skills install mermaid-architecture
 claude skills list
 ```
 
-Skills land in `.claude/skills/<name>/` — plain Markdown, inspectable, version-controllable.
+Skills land in `.claude/skills/<name>/` as plain Markdown, so they're inspectable and version-controllable.
 
 **OpenCode** uses `.opencode/skills/`. No central registry yet; install by copying or symlinking.
 
-**Cursor rules** are shared via [cursor.directory](https://cursor.directory) — copy `.mdc` content into `.cursor/rules/`.
+**Cursor rules** are shared via [cursor.directory](https://cursor.directory); copy `.mdc` content into `.cursor/rules/`.
 
 ### Managing your own skills and rules across projects
 
 *Audited: 2026-07-01*
 
-No tool in the cross-tool AI config sync space has crossed 10K GitHub stars — the category is 6–12 months old. The adjacent tools with real traction solve different problems: **repomix** packs repos into LLM-friendly files; **agentsmd/agents.md** is the AGENTS.md community spec (not a sync tool).
+No tool in the cross-tool AI config sync space has crossed 10K GitHub stars; the category is only 6-12 months old. The adjacent tools with real traction solve different problems: repomix packs repos into LLM-friendly files, and agentsmd/agents.md is the AGENTS.md community spec rather than a sync tool.
 
 | Repo | Stars | What it does | Gap |
 |---|---|---|---|
 | [yamadashy/repomix](https://github.com/yamadashy/repomix) | ~27K | Packs repo into AI-friendly file | Context feeding, not config sync |
-| [agentsmd/agents.md](https://github.com/agentsmd/agents.md) | ~23K | AGENTS.md community spec | Spec only — no tooling |
+| [agentsmd/agents.md](https://github.com/agentsmd/agents.md) | ~23K | AGENTS.md community spec | Spec only, no tooling |
 | [steipete/agent-rules](https://github.com/steipete/agent-rules) | ~5.7K | Rules drop-in for Claude Code / Cursor | Single-author personal rules |
 | [block/ai-rules](https://github.com/block/ai-rules) | ~110 | CLI to generate rules for 11 agents | Early-stage |
 | [dot-agents/dot-agents](https://github.com/dot-agents/dot-agents) | ~50 | `~/.agents/` unifier | Early-stage |
@@ -339,7 +339,7 @@ No tool in the cross-tool AI config sync space has crossed 10K GitHub stars — 
 | [betagouv/agnostic-ai](https://github.com/betagouv/agnostic-ai) | ~26 | `.ai/` dir → generated tool configs | Early-stage |
 | [agent-rules/agent-rules](https://github.com/agent-rules/agent-rules) | ~20 | Community standard spec | Spec only |
 
-The de-facto baseline is `AGENTS.md` at the project root — read natively by OpenCode, Codex CLI, Cline, and 28+ harnesses; Claude Code falls back to it when no `CLAUDE.md` is present. Re-audit quarterly; this space is moving fast.
+The de-facto baseline is `AGENTS.md` at the project root, read natively by OpenCode, Codex CLI, Cline, and 28+ harnesses. Claude Code falls back to it when no `CLAUDE.md` is present. Re-audit quarterly; this space is moving fast.
 
 ### Cursor `.mdc` frontmatter
 
@@ -355,17 +355,17 @@ Always use `const` over `let`...
 ### Key points
 
 - `AGENTS.md` is the cross-tool standard for OpenAI-ecosystem harnesses (Codex CLI, OpenCode).
-- Claude Code commands have no cross-tool equivalent — document them in `CLAUDE.md`.
-- MCP server definitions live in each tool's config separately — no shared format yet.
-- Codex CLI sandbox details: `~/.codex/config.yaml` — see §4.1.
+- Claude Code commands have no cross-tool equivalent, so document them in `CLAUDE.md`.
+- MCP server definitions live in each tool's config separately; there's no shared format yet.
+- Codex CLI sandbox details: `~/.codex/config.yaml`, see §4.1.
 
 ## 9. Caveats
 
-- **Rankings churn monthly** — verify [Terminal-Bench](https://terminal-bench.com) scores before deciding.
-- **[Jan](https://jan.ai) function-calling gaps** and **[LM Studio](https://lmstudio.ai) no MCP** — test tool-heavy paths first.
-- **Ollama MLX requires 32 GB+** — 8/16 GB Macs fall back to GGML/Metal; use llama.cpp direct instead.
-- **License nuance** — AGPL/BSL/FSL ≠ "open source"; check before commercial use.
-- **MCP transport** — use [Streamable HTTP](https://modelcontextprotocol.io/docs/concepts/transports); SSE is deprecated.
-- **Codex CLI + network** — commands needing outbound network require `sandboxNetworkPolicy: unrestricted`; missing this produces silent failures.
+- **Rankings churn monthly.** Verify [Terminal-Bench](https://terminal-bench.com) scores before deciding.
+- **[Jan](https://jan.ai) has function-calling gaps and [LM Studio](https://lmstudio.ai) has no MCP.** Test tool-heavy paths first.
+- **Ollama MLX requires 32 GB+.** On 8/16 GB Macs it falls back to GGML/Metal; use llama.cpp directly instead.
+- **License nuance:** AGPL/BSL/FSL is not the same as "open source"; check before commercial use.
+- **MCP transport:** use [Streamable HTTP](https://modelcontextprotocol.io/docs/concepts/transports); SSE is deprecated.
+- **Codex CLI + network:** commands needing outbound network require `sandboxNetworkPolicy: unrestricted`; missing this produces silent failures.
 
 *Sources: [OpenCode](https://opencode.ai), [Ollama](https://ollama.com), [FastMCP](https://github.com/jlowin/fastmcp) docs; [Terminal-Bench 2.1](https://terminal-bench.com); [Ollama MLX blog](https://ollama.com/blog/mlx). Surveyed June 2026. Figures are point-in-time.*
