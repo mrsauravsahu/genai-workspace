@@ -69,6 +69,31 @@ link() {
   echo "link  $link -> $dest"
 }
 
+# Check out any submodule that declares a `fridaySymlink` but hasn't been
+# populated yet — without this the generated links dangle and no harness can
+# see the skill. Already-checked-out submodules are left untouched, so this
+# is safe to re-run.
+sync_vendor_submodules() {
+  [ -f "$ROOT/.gitmodules" ] || return 0
+  git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1 || return 0
+
+  local paths
+  paths="$(git config -f "$ROOT/.gitmodules" --get-regexp '^submodule\..*\.fridaySymlink$' 2>/dev/null |
+    awk '{print $1}' | sed 's/^submodule\.//; s/\.fridaysymlink$//' | sort -u)"
+
+  local path
+  while read -r path; do
+    [ -n "$path" ] || continue
+    # A populated submodule has content; an uninitialized one is an empty dir.
+    if [ -n "$(ls -A "$ROOT/$path" 2>/dev/null)" ]; then
+      echo "ok    submodule $path"
+      continue
+    fi
+    echo "fetch submodule $path"
+    git -C "$ROOT" submodule update --init --depth 1 -- "$path"
+  done <<< "$paths"
+}
+
 # Regenerate .friday/skills/* and .friday/commands/* from every
 # `fridaySymlink = <path>` entry in .gitmodules (see
 # .friday/commands/friday-install.md). `git submodule add` always names a
@@ -104,6 +129,7 @@ ask() {
   [[ "$reply" =~ ^[Yy]$ ]]
 }
 
+sync_vendor_submodules
 sync_vendor_symlinks
 
 echo
