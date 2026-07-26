@@ -16,3 +16,9 @@
 	fridaySymlink = skills/ponytail-gain
 	fridaySymlink = skills/ponytail-help
 	fridaySymlink = skills/ponytail-review
+[submodule ".friday/vendor/builderio-skills"]
+	path = .friday/vendor/builderio-skills
+	url = git@github.com:BuilderIO/skills.git
+	shallow = true
+	fridaySymlink = skills/visual-plan
+	fridaySymlink = skills/visual-recap
