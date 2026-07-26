@@ -1,14 +1,14 @@
 # GenAI Workspace
 
-Terminal-first setup for driving hosted and local AI models across Claude Code, Cursor, Codex CLI, and OpenCode — one shared source of truth, symlinked into whatever each tool expects.
+Terminal-first setup for driving hosted and local AI models across Claude Code, Cursor, Codex CLI, and OpenCode. One shared source of truth, symlinked into whatever each tool expects.
 
 Background research and tooling comparison that led to this setup: [docs/tooling-research.md](docs/tooling-research.md).
 
-Project conventions (git, snippets, coding style) live in [.friday/rules.md](.friday/rules.md) — the source of truth symlinked as `CLAUDE.md` / `AGENTS.md` / `.cursorrules`.
+Project conventions (git, snippets, coding style) live in [.friday/rules.md](.friday/rules.md), the source of truth symlinked as `CLAUDE.md` / `AGENTS.md` / `.cursorrules`.
 
-## `.friday/` — shared source of truth
+## `.friday/`: shared source of truth
 
-`.friday/` holds everything shared across harnesses — rules, MCP config, skills, commands — in one place instead of scattered across `.claude/`, `.opencode/`, `.cursor/`, etc. Each harness reads from its own path, so `.friday/init` symlinks the canonical files into place.
+`.friday/` holds everything shared across harnesses (rules, MCP config, skills, commands) in one place instead of scattered across `.claude/`, `.opencode/`, `.cursor/`, etc. Each harness reads from its own path, so `.friday/init` symlinks the canonical files into place.
 
 ```
 .friday/
@@ -35,7 +35,7 @@ Prompts for which tooling you use (Claude Code, Cursor, Codex CLI/OpenCode) and 
 | Cursor | `.cursorrules` |
 | Codex CLI / OpenCode | `AGENTS.md` |
 
-Idempotent — re-run any time to fix drifted links. If a real file already exists at a link path, it's backed up to `<file>.bak` before being replaced. The generated links are per-user setup, not project source, so they're gitignored.
+Idempotent: re-run any time to fix drifted links. If a real file already exists at a link path, it's backed up to `<file>.bak` before being replaced. The generated links are per-user setup, not project source, so they're gitignored.
 
 ```bash
 bash .friday/cleanup   # remove the symlinks .friday/init created
@@ -53,11 +53,11 @@ Skills are Markdown (`SKILL.md`) directories. Two ways to add one:
   ln -s ../vendor/<upstream-repo>/skills/<skill-name> .friday/skills/<skill-name>
   ```
 
-  `vendor/` stays an unmodified upstream clone; `skills/` is the curated, symlinked surface that `.friday/init` wires into each harness.
+  `vendor/` stays an unmodified upstream clone. `skills/` is the curated, symlinked surface that `.friday/init` wires into each harness.
 
 ### Adding a command
 
-Commands are Claude Code–formatted Markdown under `.friday/commands/`, e.g. `.friday/commands/friday-snippet.md`:
+Commands are Claude Code formatted Markdown under `.friday/commands/`, e.g. `.friday/commands/friday-snippet.md`:
 
 ```markdown
 ---
@@ -65,20 +65,20 @@ description: One-line description shown in the command list
 argument-hint: [optional hint for $ARGUMENTS]
 ---
 
-Command body — instructions Claude Code follows when you run /friday-snippet.
+Command body. Instructions Claude Code follows when you run /friday-snippet.
 ```
 
 One example already in the repo: `/friday-snippet` turns a topic into a one-pager under `snippets/` (gitignored, never pushed).
 
-`.friday/init` symlinks `.friday/commands` → `.claude/commands`, so any file added here becomes a `/name` slash command in Claude Code automatically. **No cross-tool equivalent exists yet** — Cursor and other harnesses use different formats, so commands only work in Claude Code today.
+`.friday/init` symlinks `.friday/commands` → `.claude/commands`, so any file added here becomes a `/name` slash command in Claude Code automatically. No cross-tool equivalent exists yet: Cursor and other harnesses use different formats, so commands only work in Claude Code today.
 
 ### Editing rules
 
-`.friday/rules.md` is the single source of truth for cross-harness instructions — symlinked as `CLAUDE.md`, `AGENTS.md`, and `.cursorrules`. Edit it once; every harness picks up the change.
+`.friday/rules.md` is the single source of truth for cross-harness instructions, symlinked as `CLAUDE.md`, `AGENTS.md`, and `.cursorrules`. Edit it once and every harness picks up the change.
 
 ### Making `.friday/` global across projects
 
-Harnesses resolve `.friday` relative to the working directory, so a project can't just point at `~/.friday`. Instead, keep a canonical `.friday` at `$HOME` and symlink it *into* each project that wants the shared setup:
+Harnesses resolve `.friday` relative to the working directory, so a project can't just point at `~/.friday`. Keep a canonical `.friday` at `$HOME` instead, and symlink it *into* each project that wants the shared setup:
 
 ```bash
 # in a project root
