@@ -4,6 +4,11 @@
 # then ask which AI tooling you use and symlink the canonical .friday/ files
 # into the paths each tool reads.
 #
+# .friday/settings.json is the canonical settings file, written in Claude
+# Code's schema. Claude Code reads it through a symlink; every other tool
+# gets it translated into its own schema by the agent (see the note this
+# script prints at the end).
+#
 # Run from the hub project root to bootstrap it:
 #
 #     bash .friday/init
@@ -105,20 +110,41 @@ echo
 echo "Which AI tooling do you use in $TARGET?"
 echo
 
+# Tools picked below that need .friday/settings.json translated rather than
+# symlinked — collected here so the closing note can name them.
+TRANSLATE=()
+
 if ask "Claude Code?"; then
   link ".friday/rules.md" "CLAUDE.md"
   link ".friday/mcp.json" ".mcp.json"
   link ".friday/skills" ".claude/skills"
   link ".friday/commands" ".claude/commands"
+  # .friday/settings.json is already in Claude Code's schema — no translation.
+  link ".friday/settings.json" ".claude/settings.json"
 fi
 
 if ask "Cursor?"; then
   link ".friday/rules.md" ".cursorrules"
+  TRANSLATE+=("Cursor (.cursor/settings.json)")
 fi
 
 if ask "Codex CLI / OpenCode (AGENTS.md)?"; then
   link ".friday/rules.md" "AGENTS.md"
+  TRANSLATE+=("Codex CLI / OpenCode (.codex/config.toml, .opencode/opencode.json)")
 fi
 
 echo
 echo "done. bootstrap complete."
+
+if [ ${#TRANSLATE[@]} -gt 0 ]; then
+  echo
+  echo "Settings still need translating for:"
+  printf '  - %s\n' "${TRANSLATE[@]}"
+  echo
+  echo "Ask your agent, from $TARGET:"
+  echo
+  echo "  Translate .friday/settings.json (Claude Code schema) into the"
+  echo "  equivalent settings for the tools listed above, writing each to that"
+  echo "  tool's own config path. Drop options with no equivalent rather than"
+  echo "  inventing keys, and say which ones you dropped."
+fi
