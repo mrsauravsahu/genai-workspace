@@ -116,8 +116,12 @@ sync_vendor_symlinks() {
     local bucket=skills
     case "$sympath" in commands/*) bucket=commands ;; esac
     local base dest
-    base="$(basename "$sympath")"
-    dest="../vendor/$repo/$sympath"
+    # `.` means the vendor repo root is itself the skill — name the link
+    # after the repo, since basename "." is useless.
+    case "$sympath" in
+      .) base="$repo"; dest="../vendor/$repo" ;;
+      *) base="$(basename "$sympath")"; dest="../vendor/$repo/$sympath" ;;
+    esac
     ln -sfn "$dest" "$FRIDAY_DIR/$bucket/$base"
     echo "link  .friday/$bucket/$base -> $dest"
   done

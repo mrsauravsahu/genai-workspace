@@ -22,3 +22,8 @@
 	shallow = true
 	fridaySymlink = skills/visual-plan
 	fridaySymlink = skills/visual-recap
+[submodule ".friday/vendor/humanizer"]
+	path = .friday/vendor/humanizer
+	url = git@github.com:blader/humanizer.git
+	shallow = true
+	fridaySymlink = .
