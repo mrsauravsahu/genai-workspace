@@ -26,6 +26,13 @@ notion: https://app.notion.com/p/<page-id>
   - Vendor symlinks keep their upstream name and are never committed — untracked by design, safe to leave dangling until the submodule is checked out.
   - Locally authored skills/commands must be named `friday-<name>` so they're tracked.
 
+## Settings
+
+- `.friday/settings.json` is the canonical settings file, written in Claude Code's schema. Edit it there — never edit a tool-specific settings path directly.
+- `.friday/init` symlinks it to `.claude/settings.json` (same schema, no translation needed). `/.claude/settings.json` is gitignored as generated.
+- Every other tool gets it *translated*, not symlinked: after `.friday/init`, ask the agent to translate `.friday/settings.json` into each selected tool's own config format and path. Options with no equivalent are dropped, not invented — the agent should say which it dropped.
+- `.claude/settings.local.json` stays local and untracked; it's per-machine, not part of the canonical set.
+
 ## Git
 
 - Use SSH remotes (`git@github.com:owner/repo.git`) for all clone/remote operations, not HTTPS.
