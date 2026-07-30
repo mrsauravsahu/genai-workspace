@@ -15,10 +15,13 @@ pipeline. It supports Mermaid diagrams (via `mermaid-filter`) and emoji.
 paper <file.md> [-o <output.pdf>] [-n] [--continuous] [--breaks=yes|no] [--title=yes|no] [--pages=yes|no] [-v]
 ```
 
-- Default output: `<file>.pdf` next to the input if `-o` is omitted.
+- Default output: `<file>.pdf` next to the input if `-o` is omitted. Prefer
+  omitting `-o` so the PDF lands beside the markdown.
 - `-v` prints verbose docker/pandoc output — useful for diagnosing render
   failures (missing glyphs, mermaid syntax errors, etc).
-- `-n` skips auto-opening the resulting PDF.
+- `-n` skips auto-opening the resulting PDF. **Never pass `-n` without `-o`** —
+  it also suppresses the default output path, so the PDF renders to the
+  container's `/tmp` and `--rm` discards it (exit code 0, no file, no error).
 - Requires Docker running locally (the `paper:latest` image does the actual
   pandoc/xelatex/mermaid-filter work).
 
@@ -34,5 +37,5 @@ paper <file.md> [-o <output.pdf>] [-n] [--continuous] [--breaks=yes|no] [--title
 ## Example
 
 ```bash
-paper README.md -o README.pdf -v
+paper README.md -v
 ```
