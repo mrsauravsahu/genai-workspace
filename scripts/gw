@@ -1,0 +1,38 @@
+#! /usr/bin/env zsh
+# gw [dir] [ai] — genai-workspace: new tab in the TOP-LEVEL tmux (default socket),
+#                 split nvim (70%) | agent (30%) side by side.
+#   dir : directory to open in                (default: current dir)
+#   ai  : "claude agents" | opencode | <cmd>  (default: "claude agents")
+emulate -L zsh
+
+dir="${1:-$PWD}"
+ai="${2:-claude agents}"
+dir="${dir:A}"
+[[ -d "$dir" ]] || { print -u2 "gw: no such dir: $dir"; exit 1 }
+
+# tmux 3.7+ rejects '.' and ':' in window names; sanitize the basename and
+# strip a leading dash from names like ".cli-config".
+wname="${${dir:t}//[.:]/-}"
+wname="${wname#-}"; : "${wname:=workspace}"
+
+# auto_tmux (see .zshrc) runs the top-level server on the DEFAULT socket; the
+# nested nvim tmux uses `-L vim`. Force the default socket so gw always lands at
+# the top level, even when called from inside nvim's terminal.
+tm=(tmux -L default)
+
+$tm has-session 2>/dev/null || { print -u2 "gw: top-level tmux not running"; exit 1 }
+
+# Create the tab first; bail loudly if it fails so we never fall back to
+# splitting the current window (which would run the agent in the wrong tab).
+pane=$($tm new-window -P -F '#{pane_id}' -c "$dir" -n "$wname" nvim) || exit 1
+[[ -n "$pane" ]] || { print -u2 "gw: could not open top-level window"; exit 1 }
+
+$tm split-window -h -l 30% -t "$pane" -c "$dir" "$ai"
+$tm select-pane   -t "$pane"
+$tm select-window -t "$pane"
+
+# Called from inside nvim's nested (-L vim) tmux? The new tab lives on the
+# top-level server and can't be shown from here — inform rather than look broken.
+if (( ${TMUX_NESTING_LEVEL:-0} >= 2 )); then
+  print -u2 "gw: opened top-level tab '$wname' — leave nvim / return to your top-level tmux to see it"
+fi
