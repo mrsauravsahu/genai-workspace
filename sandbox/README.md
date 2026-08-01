@@ -7,10 +7,12 @@ heavier OpenSandbox approach — the jail is just a Docker bind mount.
 ## How the jail works
 
 The container only sees what `run.sh` bind-mounts: the current working
-directory (`-v "$PWD:/workspace"`). Everything else on the host (`~/.ssh`,
-`~/.aws`, other repos) is invisible inside the container because it was never
-mounted. On macOS, Docker runs in a Linux VM that never had your `~` anyway, so
-the bind mount is the only exposed path.
+directory (`-v "$PWD:/workspace"`) and the host's `~/.claude` config
+(`-v "$HOME/.claude:/home/dev/.claude"`, so your existing Claude subscription /
+login carries over). Everything else on the host (`~/.ssh`, `~/.aws`, other
+repos) is invisible inside the container because it was never mounted. On macOS,
+Docker runs in a Linux VM that never had your `~` anyway, so those two bind
+mounts are the only exposed paths.
 
 ## Build
 
@@ -42,7 +44,8 @@ Args pass straight through to `claude`, e.g. `sandbox/run.sh -p "run the tests"`
 - **Network is still open.** A filesystem jail doesn't stop network egress. If
   your threat model needs it, add `--network none` (breaks Claude's API calls)
   or a proxy allowlist.
-- **Auth widens the surface if mounted.** Prefer forwarding `ANTHROPIC_API_KEY`
-  over mounting `~/.claude`.
+- **Auth.** `run.sh` mounts `~/.claude` so your host subscription/login works
+  inside the container; this shares that config dir with the container. Remove
+  the mount and forward `ANTHROPIC_API_KEY` instead if you'd rather not.
 - The mount is read-write — Claude can modify the jailed repo. Use a branch or
   git worktree if you want a throwaway copy.
