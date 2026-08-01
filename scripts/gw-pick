@@ -1,0 +1,16 @@
+#! /usr/bin/env zsh
+# gw-pick — fzf directory picker for the tmux `+g popup, then hand off to gw.
+#           Browses directories (incl. hidden) under $GW_ROOT (default: $HOME).
+emulate -L zsh
+
+cd "${GW_ROOT:-$HOME}" || exit 1
+
+sel=$(
+  fzf --walker=dir,follow,hidden \
+      --walker-skip='.git,node_modules,.cache,.Trash,Library,Applications,.cargo,.rustup,go,.npm,.terraform,Pictures,Music,Movies' \
+      --prompt='gw ❯ ' \
+      --header='pick a directory → nvim + claude agents' \
+      --border=rounded
+) || exit 0
+
+[[ -n "$sel" ]] && exec gw "$sel"
