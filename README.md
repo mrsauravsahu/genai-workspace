@@ -2,6 +2,10 @@
 
 Terminal-first setup for driving hosted and local AI models across Claude Code, Cursor, Codex CLI, and OpenCode. One shared source of truth, symlinked into whatever each tool expects.
 
+![The gw workspace: Neovim and Claude Code side by side in tmux](docs/assets/gw-workspace-ui.png)
+
+One command (`gw`) drops you into a tmux workspace — Neovim on the left, Claude Code on the right — so editing and AI sessions share one screen. Hand off a task and Claude sorts it into *Needs input · Working · Completed* while you keep coding.
+
 Background research and tooling comparison that led to this setup: [docs/tooling-research.md](docs/tooling-research.md).
 
 Project conventions (git, snippets, coding style) live in [.friday/rules.md](.friday/rules.md), the source of truth symlinked as `CLAUDE.md` / `AGENTS.md` / `.cursorrules`.
