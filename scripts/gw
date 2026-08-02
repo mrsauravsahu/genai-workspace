@@ -1,8 +1,12 @@
 #! /usr/bin/env zsh
-# gw [dir] [ai] — genai-workspace: new tab in the TOP-LEVEL tmux (default socket),
-#                 split nvim (70%) | agent (30%) side by side.
+# gw [dir] [ai] — genai-workspace: split nvim (70%) | agent (30%) side by side in
+#                 the TOP-LEVEL tmux (default socket).
 #   dir : directory to open in                (default: current dir)
 #   ai  : "claude agents" | opencode | <cmd>  (default: "claude agents")
+#
+# If dir is the CURRENT directory (`gw` / `gw .`), reuse the CURRENT tab: the AI
+# splits in on the right and nvim takes over this pane. Any OTHER dir opens a new
+# tab so unrelated workspaces stay separate.
 emulate -L zsh
 
 dir="${1:-$PWD}"
@@ -21,6 +25,18 @@ wname="${wname#-}"; : "${wname:=workspace}"
 tm=(tmux -L default)
 
 $tm has-session 2>/dev/null || { print -u2 "gw: top-level tmux not running"; exit 1 }
+
+# Same directory + a real top-level tmux client (not nested inside nvim's -L vim
+# server): reuse the CURRENT tab instead of opening a new one. Split the AI in on
+# the right, then `exec nvim` so this very pane — the one running gw — becomes the
+# nvim editor. When run from inside nvim (nesting >= 2) we can't sensibly reuse
+# the nested tab, so fall through to the new-tab path below.
+if [[ "$dir" == "${PWD:A}" && -n "$TMUX" && "${TMUX_NESTING_LEVEL:-0}" -lt 2 ]]; then
+  $tm split-window -h -l 30% -c "$dir" "$ai" || exit 1
+  $tm select-pane -L
+  cd "$dir" || exit 1
+  exec nvim
+fi
 
 # Create the tab first; bail loudly if it fails so we never fall back to
 # splitting the current window (which would run the agent in the wrong tab).
