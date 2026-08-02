@@ -1,4 +1,5 @@
 snippets/
+research/
 repos/
 .envrc
 agent.envrc
@@ -25,5 +26,3 @@ agent.envrc
 .friday/**/*.pdf
 .pdf
 .DS_Store
-
-friday-research
