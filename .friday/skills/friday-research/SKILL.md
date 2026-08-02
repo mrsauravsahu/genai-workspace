@@ -41,25 +41,36 @@ interrogate for context that wouldn't change the output.
 
 ## Steps
 
-1. **Scope.** Confirm what's being decided and what the requester's current context is
-   (what they already use/know/have, what constraints matter). Skip this if it's already
-   clear from `$ARGUMENTS`.
-2. **Search.** Use web search/fetch for current state — do not rely on prior knowledge
-   alone, the landscape may have moved since training. Run several independent, differently
-   -angled queries rather than one broad one, so the categories in step 3 are actually
-   populated with real findings rather than the first few results.
-3. **Categorize.** Group findings into categories that map to the decision itself (e.g. by
-   risk/maturity, by mechanism, by how well it fits the requester's existing setup) —
-   choose groupings that make the table actionable, not just a taxonomy of what exists.
-4. **Compare.** Build the table(s): option, key trait/mechanism, and a fit/notes column
-   written for this requester's context specifically.
-5. **Sanity-check sources.** Flag anything that looks unreliable — inflated marketing
-   claims, unclear maintainer/provenance, near-duplicate forks, thin evidence — rather than
-   presenting every source at face value.
-6. **Recommend.** Write the Recommendation section as a short, ordered plan grounded in
-   what the requester already has, explicitly naming the constraints that ruled options in
-   or out.
-7. **Save.** Write to `research/<kebab-case-topic>.md` in the current project (create
-   `research/` if it doesn't exist).
-8. **Report.** State the saved path and a one-line summary of the recommendation.
+- **Scope.** Confirm what's being decided and what the requester's current context is
+  (what they already use/know/have, what constraints matter). Skip this if it's already
+  clear from `$ARGUMENTS`.
+- **Budget.** Ask the requester how much subagent and time budget to spend, and size the
+  research fan-out in the Search step to their choice:
+
+  | Tier | Research subagents | Time cap |
+  | --- | --- | --- |
+  | **quick** | up to **2** agents finding details and validating them | ~1 minute |
+  | **medium** | up to **4** agents finding details and validating them | ~5 minutes |
+
+  Default to **quick** if they don't care. Each agent takes one angle/category, gathers
+  findings, and validates them; keep the whole search phase within the time cap even if
+  that means fewer angles.
+- **Search.** Use web search/fetch for current state — do not rely on prior knowledge
+  alone, the landscape may have moved since training. Fan out into the number of parallel
+  research subagents chosen in the Budget step, each taking a distinct angle rather than one
+  broad query, so the categories in the next step are populated with real, validated findings.
+- **Categorize.** Group findings into categories that map to the decision itself (e.g. by
+  risk/maturity, by mechanism, by how well it fits the requester's existing setup) —
+  choose groupings that make the table actionable, not just a taxonomy of what exists.
+- **Compare.** Build the table(s): option, key trait/mechanism, and a fit/notes column
+  written for this requester's context specifically.
+- **Sanity-check sources.** Flag anything that looks unreliable — inflated marketing
+  claims, unclear maintainer/provenance, near-duplicate forks, thin evidence — rather than
+  presenting every source at face value.
+- **Recommend.** Write the Recommendation section as a short, ordered plan grounded in
+  what the requester already has, explicitly naming the constraints that ruled options in
+  or out.
+- **Save.** Write to `research/<kebab-case-topic>.md` in the current project (create
+  `research/` if it doesn't exist).
+- **Report.** State the saved path and a one-line summary of the recommendation.
 
