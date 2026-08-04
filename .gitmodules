@@ -27,3 +27,8 @@
 	url = git@github.com:blader/humanizer.git
 	shallow = true
 	fridaySymlink = .
+[submodule ".friday/vendor/impeccable"]
+	path = .friday/vendor/impeccable
+	url = git@github.com:pbakaus/impeccable.git
+	shallow = true
+	fridaySymlink = plugin/skills/impeccable
