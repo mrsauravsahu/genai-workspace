@@ -10,7 +10,7 @@ Background research and tooling comparison that led to this setup: [docs/tooling
 
 Project conventions (git, snippets, coding style) live in [.friday/rules.md](.friday/rules.md), the source of truth symlinked as `CLAUDE.md` / `AGENTS.md` / `.cursorrules`.
 
-## `.friday/`: shared source of truth
+## .friday: shared source of truth
 
 `.friday/` holds everything shared across harnesses (rules, MCP config, skills, commands) in one place instead of scattered across `.claude/`, `.opencode/`, `.cursor/`, etc. Each harness reads from its own path, so `.friday/init` symlinks the canonical files into place.
 
