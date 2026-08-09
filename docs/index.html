@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GenAI Workspace — one terminal, any model</title>
+<meta name="description" content="Terminal-first setup for driving hosted and local AI models across Claude Code, Cursor, Codex CLI and OpenCode. tmux + Neovim + one agent pane, with one shared source of truth in .friday/.">
+<style>
+/* ============================================================
+   GenAI Workspace — see docs/DESIGN.md
+   Tokens are Tokyo Night, lifted from the gw terminal itself.
+   ============================================================ */
+:root{
+  --bg:#1a1b26; --bg-raised:#1f2335; --bg-inset:#16161e; --border:#2a2e42;
+  --fg:#c0caf5; --fg-dim:#8b93b8; --fg-muted:#565f89;
+  --blue:#7aa2f7; --cyan:#7dcfff; --green:#9ece6a; --yellow:#e0af68;
+  --red:#f7768e; --purple:#bb9af7;
+  --font: ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+  --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:24px;
+  --s-6:32px; --s-7:48px; --s-8:72px; --s-9:112px;
+  --radius:6px;
+  --ease:cubic-bezier(.2,.8,.2,1);
+  --dur-fast:120ms; --dur:240ms; --dur-slow:480ms;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);
+     font-size:1rem;line-height:1.7;-webkit-font-smoothing:antialiased}
+.wrap{max-width:960px;margin:0 auto;padding:0 var(--s-5)}
+section{padding:var(--s-9) 0;border-bottom:1px solid var(--border)}
+h1{font-size:clamp(2rem,6vw,3.5rem);line-height:1.1;font-weight:700;letter-spacing:-.01em}
+.h1-name{display:block;color:var(--green);font-size:clamp(1.25rem,3.2vw,1.75rem);
+         letter-spacing:.02em;margin-bottom:var(--s-5)}
+h2{font-size:1.5rem;line-height:1.3;font-weight:700;margin-bottom:var(--s-4)}
+h3{font-size:1.125rem;line-height:1.4;font-weight:700;margin-bottom:var(--s-3)}
+p{color:var(--fg-dim);max-width:68ch}
+p + p{margin-top:var(--s-4)}
+code{color:var(--cyan)}
+strong{color:var(--fg);font-weight:700}
+a{color:var(--blue);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:rgba(122,162,247,.4);transition:text-decoration-color var(--dur-fast) var(--ease)}
+a:hover{text-decoration-color:var(--blue)}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.label{font-size:.75rem;letter-spacing:.02em;text-transform:uppercase;
+       color:var(--fg-muted);margin-bottom:var(--s-3)}
+.lede{font-size:1rem;color:var(--fg-dim);margin-top:var(--s-5)}
+.note{color:var(--fg-muted);font-size:.875rem}
+
+/* ---- nav: tmux status line ---- */
+nav{position:sticky;top:0;z-index:10;background:var(--bg);
+    border-bottom:1px solid var(--border);font-size:.75rem;padding:var(--s-3) 0}
+nav .wrap{display:flex;gap:var(--s-4);align-items:center;flex-wrap:wrap}
+.tab{background:var(--green);color:var(--bg);padding:1px var(--s-2);font-weight:700}
+nav a{color:var(--fg-muted);text-decoration:none;transition:color var(--dur-fast) var(--ease)}
+nav a:hover{color:var(--fg)}
+nav .sp{margin-left:auto}
+
+/* ---- terminal window ---- */
+.term{background:var(--bg-inset);border:1px solid var(--border);
+      border-radius:var(--radius);overflow:hidden}
+.term-bar{display:flex;align-items:center;gap:var(--s-2);padding:var(--s-2) var(--s-3);
+          border-bottom:1px solid var(--border);font-size:.75rem;color:var(--fg-muted)}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.term-body{padding:var(--s-4);font-size:.875rem;line-height:1.6;overflow-x:auto}
+.term-body .row{white-space:pre;color:var(--fg-dim)}
+.hero-term{box-shadow:0 20px 60px rgba(0,0,0,.4);margin-top:var(--s-7)}
+/* the command that opened this window, typed once on load */
+.term-run{padding:var(--s-3) var(--s-4);border-bottom:1px solid var(--border);
+          font-size:.875rem;color:var(--fg-dim);white-space:nowrap;overflow:hidden}
+.term-run b{color:var(--green);font-weight:700}
+.typed{display:inline-block;vertical-align:bottom;
+       animation:type 400ms steps(2,end) 300ms both}
+@keyframes type{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+
+/* split panes, mirrors the real gw layout: nvim 70% | agent 30% */
+.split{display:grid;grid-template-columns:7fr 3fr;min-height:300px}
+.split > div{padding:var(--s-4);font-size:.8125rem;line-height:1.6}
+.split > div + div{border-left:1px solid var(--border)}
+@media(max-width:720px){.split{grid-template-columns:1fr}
+  .split > div + div{border-left:0;border-top:1px solid var(--border)}}
+
+.cursor{display:inline-block;width:8px;height:1em;background:var(--green);
+        vertical-align:text-bottom;animation:blink 1s step-end infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ---- command block ---- */
+.cmd{background:var(--bg-inset);border:1px solid var(--border);border-radius:var(--radius);
+     padding:var(--s-3) var(--s-4);display:flex;align-items:center;gap:var(--s-4);
+     font-size:.9375rem;transition:border-color var(--dur-fast) var(--ease)}
+.cmd:hover{border-color:var(--fg-muted)}
+.cmd .txt{flex:1;overflow-x:auto;white-space:nowrap}
+.cmd .p{color:var(--green)}
+.cmd b{color:var(--green);font-weight:700}
+.copy{background:none;border:0;color:var(--fg-muted);font-family:inherit;font-size:.75rem;
+      letter-spacing:.02em;cursor:pointer;opacity:0;padding:var(--s-1) var(--s-2);
+      transition:opacity var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
+.cmd:hover .copy,.cmd:focus-within .copy{opacity:1}
+.copy:hover{color:var(--fg)}
+.copy[data-done]{opacity:1;color:var(--green)}
+@media(hover:none){.copy{opacity:1}}
+.cmd + .cmd{margin-top:var(--s-2)}
+
+/* ---- layout helpers ---- */
+.grid{display:grid;gap:var(--s-4)}
+.g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.stack > * + *{margin-top:var(--s-5)}
+.mt4{margin-top:var(--s-4)} .mt5{margin-top:var(--s-5)} .mt6{margin-top:var(--s-6)}
+
+/* ---- stack diagram ---- */
+.layer{background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius);
+       padding:var(--s-4);transition:border-color var(--dur) var(--ease),
+       transform var(--dur) var(--ease)}
+.layer:hover{border-color:var(--fg-muted);transform:translateX(2px)}
+.layer + .layer{margin-top:var(--s-3)}
+.layer .hd{display:flex;gap:var(--s-3);align-items:baseline;flex-wrap:wrap}
+.layer .n{font-size:.75rem;color:var(--fg-muted);letter-spacing:.02em}
+.layer .t{font-weight:700}
+.layer .d{color:var(--fg-dim);font-size:.875rem;margin-top:var(--s-2)}
+.chips{display:flex;flex-wrap:wrap;gap:var(--s-2);margin-top:var(--s-3)}
+.chip{font-size:.75rem;color:var(--fg-dim);background:var(--bg-inset);
+      border:1px solid var(--border);padding:2px var(--s-2)}
+.chip.on{color:var(--green);border-color:rgba(158,206,106,.4)}
+/* brand marks — the only off-palette colors on the page, scoped to harness chips */
+.chip.b-claude{color:#d97757;border-color:rgba(217,119,87,.45)}
+.chip.b-opencode{color:#f2f2f2;border-color:rgba(242,242,242,.35)}
+.chip.b-codex{color:#10a37f;border-color:rgba(16,163,127,.45)}
+.chip.b-cursor{color:#a5b4fc;border-color:rgba(165,180,252,.4)}
+.chip.b-gemini{color:#4796e3;border-color:rgba(71,150,227,.45)}
+.arrow{color:var(--fg-muted);font-size:.75rem;text-align:center;padding:var(--s-1) 0}
+
+/* ---- status list ---- */
+.status{list-style:none;font-size:.875rem}
+.status li{padding:var(--s-1) 0;color:var(--fg-dim)}
+.status .k{display:inline-block;min-width:11ch}
+.pulse{display:inline-block;width:6px;height:6px;border-radius:50%;
+       background:var(--green);margin-right:var(--s-2);animation:pulse 1.6s var(--ease) infinite}
+@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+
+/* ---- file tree ---- */
+.tree{list-style:none;font-size:.8125rem;line-height:1.8;white-space:pre}
+.tree .dir{color:var(--blue)} .tree .lnk{color:var(--cyan)}
+.tree .imp{color:var(--yellow)} .tree .c{color:var(--fg-muted)}
+
+/* ---- table ---- */
+table{width:100%;border-collapse:collapse;font-size:.875rem}
+th,td{text-align:left;padding:var(--s-2) var(--s-3);border-bottom:1px solid var(--border);
+      vertical-align:top}
+th{color:var(--fg-muted);font-weight:400;font-size:.75rem;letter-spacing:.02em;
+   text-transform:uppercase}
+td{color:var(--fg-dim)}
+.tbl-scroll{overflow-x:auto}
+
+/* ---- callout ---- */
+.callout{background:var(--bg-raised);border-left:2px solid var(--yellow);
+         padding:var(--s-4);font-size:.875rem;color:var(--fg-dim)}
+.callout.b{border-left-color:var(--blue)}
+
+/* ---- reveal on scroll (once) ---- */
+.rv{opacity:0;transform:translateY(12px);
+    transition:opacity var(--dur-slow) var(--ease),transform var(--dur-slow) var(--ease)}
+.rv.in{opacity:1;transform:none}
+.no-js .rv{opacity:1;transform:none}
+
+footer{padding:var(--s-7) 0;font-size:.875rem;color:var(--fg-muted)}
+footer .wrap{display:flex;gap:var(--s-4);flex-wrap:wrap;align-items:center}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  html{scroll-behavior:auto}
+  .rv{opacity:1;transform:none}
+}
+</style>
+</head>
+<body class="no-js">
+
+<nav><div class="wrap">
+  <span class="tab">1:gw</span>
+  <span style="color:var(--fg-muted)">genai-workspace</span>
+  <a href="#stack">stack</a>
+  <a href="#workspace">workspace</a>
+  <a href="#friday">.friday</a>
+  <a href="#setup">setup</a>
+  <a class="sp" href="https://github.com/mrsauravsahu/genai-workspace">github</a>
+</div></nav>
+
+<!-- ============ HERO ============ -->
+<section>
+  <div class="wrap">
+    <h1><span class="h1-name">GenAI-Workspace</span>One terminal. Any model.</h1>
+    <p class="lede">A terminal-first setup for driving <strong>hosted frontier models</strong> and
+      <strong>models on your own hardware</strong> through the same workflow. tmux holds the screen,
+      Neovim takes the left, an agent takes the right, and every harness — Claude Code, Cursor,
+      Codex CLI, OpenCode — reads its rules from one shared source of truth.</p>
+
+    <p class="note mt5">One command — <code>gw</code> — is the whole entry point. Editing and AI
+      land on one screen, in the directory you're already standing in.</p>
+
+    <div class="term hero-term">
+      <div class="term-bar">
+        <span class="dot" style="background:var(--red)"></span>
+        <span class="dot" style="background:var(--yellow)"></span>
+        <span class="dot" style="background:var(--green)"></span>
+        <span style="margin-left:var(--s-3)">tmux</span>
+        <span class="tab" style="margin-left:var(--s-3)">1:gw</span>
+        <span>2:zsh</span>
+        <span style="margin-left:auto">21:34</span>
+      </div>
+      <div class="term-run">
+        <span style="color:var(--cyan)">~/GenAI-Workspace</span>
+        <span style="color:var(--green)">❯</span>
+        <span class="typed"><b>gw</b></span><span class="cursor" style="margin-left:2px"></span>
+      </div>
+      <div class="split">
+        <div>
+          <div style="color:var(--fg-muted)">nvim — 70%</div>
+          <div class="mt4 tree" style="line-height:1.7">
+<span class="c">~/GenAI-Workspace/</span>
+  <span class="dir">.claude</span>
+  <span class="dir">.friday</span>
+  <span class="dir">.opencode</span>
+  <span class="dir">docs</span>
+  <span class="dir">repos</span>
+  <span class="lnk">.mcp.json  → .friday/mcp.json</span>
+  <span class="lnk">AGENTS.md  → .friday/rules.md</span>
+  <span class="lnk">CLAUDE.md  → .friday/rules.md</span>
+  <span class="imp">README.md</span>
+          </div>
+        </div>
+        <div>
+          <div style="color:var(--fg-muted)">genai tooling — 30%</div>
+          <div class="chips" style="margin-top:var(--s-2)"><span class="chip b-claude">claude code</span><span class="chip b-opencode">opencode</span><span class="chip b-codex">codex</span></div>
+          <ul class="status mt4">
+            <li style="color:var(--yellow)">needs input</li>
+            <li class="note" style="padding-left:var(--s-3)">a question is waiting on you</li>
+            <li style="color:var(--green);margin-top:var(--s-2)"><span class="pulse"></span>working</li>
+            <li class="note" style="padding-left:var(--s-3)">keeps running if you close the terminal</li>
+            <li style="color:var(--fg-muted);margin-top:var(--s-2)">completed</li>
+            <li class="note" style="padding-left:var(--s-3)">finished, waiting for review</li>
+          </ul>
+          <div class="mt5" style="border-top:1px solid var(--border);padding-top:var(--s-3)">
+            <span style="color:var(--green)">❯</span>
+            <span class="note">describe a task</span><span class="cursor"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note mt4">Hand off a task larger than you'd chat through, and it gets sorted into
+      those three states while you keep editing on the left.</p>
+  </div>
+</section>
+
+<!-- ============ STACK ============ -->
+<section id="stack">
+  <div class="wrap">
+    <p class="label">how it fits together</p>
+    <h2>A stack, not one app</h2>
+    <p>The thing people call "an AI setup" is four independent layers. Keeping them separate is the
+      whole point: the model and the harness don't know about each other, so you can swap a hosted
+      frontier model for one running on your own machine without changing how you work.</p>
+
+    <div class="mt6 rv">
+      <div class="layer">
+        <div class="hd"><span class="n">layer 4</span><span class="t">Tool protocol</span></div>
+        <div class="d">Gives the model hands and feet — filesystem, git, web, your own services.
+          MCP over stdio locally, Streamable HTTP for remote. Defined once in
+          <code>.friday/mcp.json</code>.</div>
+        <div class="chips"><span class="chip">MCP</span><span class="chip">FastMCP</span>
+          <span class="chip">notion</span><span class="chip">penpot</span></div>
+      </div>
+      <div class="arrow">↕</div>
+      <div class="layer">
+        <div class="hd"><span class="n">layer 3</span><span class="t">Chat UI</span>
+          <span class="n">optional</span></div>
+        <div class="d">A browser surface over the same backend. Nice to have, never load-bearing —
+          the terminal is the primary interface.</div>
+        <div class="chips"><span class="chip">Open WebUI</span><span class="chip">LibreChat</span>
+          <span class="chip">AnythingLLM</span></div>
+      </div>
+      <div class="arrow">↕</div>
+      <div class="layer">
+        <div class="hd"><span class="n">layer 2</span><span class="t">Agent / harness</span>
+          <span class="n">the pane on the right</span></div>
+        <div class="d">Reads files, runs shell, edits repos, calls tools, loops. This is what
+          <code>gw</code> puts on screen, and what <code>.friday/</code> configures. Each harness
+          reads instructions from a different path — which is the problem <code>.friday/</code> solves.</div>
+        <div class="chips"><span class="chip b-claude">Claude Code</span><span class="chip b-opencode">OpenCode</span>
+          <span class="chip b-codex">Codex CLI</span><span class="chip b-cursor">Cursor</span>
+          <span class="chip b-gemini">Gemini CLI</span></div>
+      </div>
+      <div class="arrow">↕</div>
+      <div class="layer">
+        <div class="hd"><span class="n">layer 1</span><span class="t">Inference</span>
+          <span class="n">hosted or your own hardware</span></div>
+        <div class="d">Loads the weights and answers. Hosted frontier models for the hard reasoning;
+          a local daemon on <code>:11434</code> for everything cheap, private, or offline.</div>
+        <div class="chips"><span class="chip on">Claude</span><span class="chip">GPT</span>
+          <span class="chip">Gemini</span><span class="chip on">Ollama</span>
+          <span class="chip">llama.cpp</span><span class="chip">vLLM</span></div>
+      </div>
+    </div>
+
+    <div class="callout b mt6">The spine is layers 1, 2 and 4. Layer 3 is a convenience. If you
+      only ever set up an inference endpoint, a harness, and MCP, you have the whole thing.</div>
+  </div>
+</section>
+
+<!-- ============ MODELS ============ -->
+<section id="models">
+  <div class="wrap">
+    <p class="label">models</p>
+    <h2>Self-hosted and hosted, same workflow</h2>
+    <p>Neither choice is the right one for every task. Hosted frontier models are still where the
+      hard reasoning happens. Local models are free, private and work on a plane. Because the
+      harness sits above both, choosing is a per-task decision rather than an architecture decision.</p>
+
+    <div class="grid g2 mt6 rv">
+      <div class="term">
+        <div class="term-bar"><span style="color:var(--blue)">☁ hosted frontier</span></div>
+        <div class="term-body">
+          <div class="row">Claude · GPT · Gemini</div>
+          <div class="row c" style="color:var(--fg-muted)">─────────────────────</div>
+          <div class="row"><span style="color:var(--green)">+</span> strongest reasoning</div>
+          <div class="row"><span style="color:var(--green)">+</span> large context</div>
+          <div class="row"><span style="color:var(--green)">+</span> reliable tool-calling</div>
+          <div class="row"><span style="color:var(--red)">−</span> every token leaves the machine</div>
+          <div class="row"><span style="color:var(--red)">−</span> costs tokens, needs network</div>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-bar"><span style="color:var(--green)">⌂ your own hardware</span></div>
+        <div class="term-body">
+          <div class="row">Ollama · llama.cpp · vLLM</div>
+          <div class="row" style="color:var(--fg-muted)">─────────────────────</div>
+          <div class="row"><span style="color:var(--green)">+</span> free per token</div>
+          <div class="row"><span style="color:var(--green)">+</span> context never leaves</div>
+          <div class="row"><span style="color:var(--green)">+</span> works fully offline</div>
+          <div class="row"><span style="color:var(--red)">−</span> weaker on long agentic loops</div>
+          <div class="row"><span style="color:var(--red)">−</span> bound by your RAM</div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="mt6">Where each one earns its place</h3>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>task</th><th>runs on</th><th>why</th></tr></thead>
+        <tbody>
+          <tr><td>multi-file refactor, architecture</td><td style="color:var(--blue)">hosted</td>
+              <td>long loops need tool-calling that holds up</td></tr>
+          <tr><td>summarise a git diff</td><td style="color:var(--green)">local</td>
+              <td>runs constantly; zero cloud tokens</td></tr>
+          <tr><td>anything under NDA or unreleased</td><td style="color:var(--green)">local</td>
+              <td>the context never leaves the machine</td></tr>
+          <tr><td>research, long-context reading</td><td style="color:var(--blue)">hosted</td>
+              <td>context window is the constraint</td></tr>
+          <tr><td>on a train, no signal</td><td style="color:var(--green)">local</td>
+              <td>it's the only one that answers</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout mt5"><strong>The pattern worth stealing:</strong> a hosted model driving the
+      main loop, with a local model attached <em>as an MCP tool</em> for the cheap, repetitive
+      subtasks. One agent, two tiers of inference, and the expensive one only does the thinking.</div>
+
+    <p class="note mt5">One hard rule from the research: use weights released in the last six months.
+      Stalled local agent loops are almost always an old model with poor tool-call adherence, not a
+      broken harness. Full write-up in
+      <a href="tooling-research.md">docs/tooling-research.md</a>.</p>
+  </div>
+</section>
+
+<!-- ============ WORKSPACE ============ -->
+<section id="workspace">
+  <div class="wrap">
+    <p class="label">the workspace</p>
+    <h2>tmux holds it, Neovim edits it, the agent works beside it</h2>
+    <p>Nothing here is a new application. It's tmux, Neovim and an agent CLI arranged so that
+      handing off work never means leaving the screen you're working on.</p>
+
+    <div class="grid mt6 rv" style="gap:var(--s-3)">
+      <div class="layer">
+        <div class="hd"><span class="t">tmux</span><span class="n">the frame</span></div>
+        <div class="d">Owns the session, so work outlives the terminal window. Close the laptop lid,
+          come back, the agent is still going. <code>gw</code> always targets the top-level socket,
+          even when invoked from a shell nested inside Neovim.</div>
+      </div>
+      <div class="layer">
+        <div class="hd"><span class="t">Neovim</span><span class="n">70% — the left pane</span></div>
+        <div class="d">Where you actually work. <code>gw</code> in the current directory
+          <code>exec</code>s Neovim into the very pane you typed it in, so no window is wasted.</div>
+      </div>
+      <div class="layer">
+        <div class="hd"><span class="t">genai tooling</span><span class="n">30% — the right pane</span></div>
+        <div class="d">Claude Code, OpenCode or Codex — whichever harness you're driving, it gets
+          the same slot and the same rules from <code>.friday/</code>. Narrow on purpose: it's a
+          task queue you glance at, not something you stare into.</div>
+      </div>
+    </div>
+
+    <h3 class="mt6">Three ways in</h3>
+    <div class="stack mt4">
+      <div>
+        <div class="cmd">
+          <span class="txt"><span class="p">❯</span> <b>gw</b></span>
+          <button class="copy" data-copy="gw">copy</button>
+        </div>
+        <p class="note mt4">Current directory. Reuses this tab — agent splits in on the right,
+          Neovim takes over this pane.</p>
+      </div>
+      <div>
+        <div class="cmd">
+          <span class="txt"><span class="p">❯</span> <b>gw</b> ~/repos/my-app</span>
+          <button class="copy" data-copy="gw ~/repos/my-app">copy</button>
+        </div>
+        <p class="note mt4">Another directory. Opens its own tab, named after the folder, so
+          unrelated workspaces never share a screen.</p>
+      </div>
+      <div>
+        <div class="cmd">
+          <span class="txt"><span class="p">❯</span> <b>gw-pick</b></span>
+          <button class="copy" data-copy="gw-pick">copy</button>
+        </div>
+        <p class="note mt4">Don't know the path yet. An fzf popup, bound in tmux, browses
+          directories and hands the one you pick straight to <code>gw</code>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ .FRIDAY ============ -->
+<section id="friday">
+  <div class="wrap">
+    <p class="label">the idea</p>
+    <h2>.friday — one source of truth</h2>
+    <p>Every harness reads its instructions, MCP config, skills and commands from a different path.
+      Left alone, that means four copies of the same rules drifting apart. <code>.friday/</code>
+      holds the canonical copy, and <code>.friday/init</code> symlinks it into whatever each tool
+      expects. Edit once, every tool picks it up.</p>
+
+    <div class="grid g2 mt6 rv">
+      <div class="term">
+        <div class="term-bar"><span style="color:var(--red)">without</span></div>
+        <div class="term-body">
+          <ul class="tree">
+<li><span class="dir">.claude/</span>   <span class="c">rules, mcp, skills</span></li>
+<li><span class="dir">.cursor/</span>   <span class="c">the same rules again</span></li>
+<li><span class="dir">.opencode/</span> <span class="c">and again</span></li>
+<li><span class="c">~/.codex/  and again</span></li>
+          </ul>
+          <p class="note mt4">Four copies. Three of them are already wrong.</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-bar"><span style="color:var(--green)">with .friday</span></div>
+        <div class="term-body">
+          <ul class="tree">
+<li><span class="dir">.friday/</span>  <span class="c">the only real files</span></li>
+<li><span class="lnk">CLAUDE.md   → .friday/rules.md</span></li>
+<li><span class="lnk">AGENTS.md   → .friday/rules.md</span></li>
+<li><span class="lnk">.cursorrules → .friday/rules.md</span></li>
+<li><span class="lnk">.mcp.json   → .friday/mcp.json</span></li>
+          </ul>
+          <p class="note mt4">One file. Every tool reads it.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="mt6">What's inside</h3>
+    <div class="term">
+      <div class="term-body">
+        <ul class="tree">
+<li><span class="dir">.friday/</span></li>
+<li>├── <span class="imp">init</span>        <span class="c">bootstrap — creates every symlink below</span></li>
+<li>├── <span class="imp">cleanup</span>     <span class="c">removes what init created</span></li>
+<li>├── <span class="imp">rules.md</span>    <span class="c">source of truth for instructions</span></li>
+<li>├── <span class="imp">mcp.json</span>    <span class="c">MCP servers, shared by every harness</span></li>
+<li>├── <span class="imp">settings.json</span> <span class="c">canonical settings, Claude Code schema</span></li>
+<li>├── <span class="dir">skills/</span>     <span class="c">curated surface → .claude/skills</span></li>
+<li>├── <span class="dir">commands/</span>   <span class="c">slash commands → .claude/commands</span></li>
+<li>└── <span class="dir">vendor/</span>     <span class="c">upstream submodules, unmodified</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 class="mt6">Who gets what</h3>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>tool</th><th>links created</th></tr></thead>
+        <tbody>
+          <tr><td style="color:var(--fg)">Claude Code</td>
+              <td><code>CLAUDE.md</code>, <code>.mcp.json</code>, <code>.claude/skills</code>,
+                  <code>.claude/commands</code>, <code>.claude/settings.json</code></td></tr>
+          <tr><td style="color:var(--fg)">Cursor</td><td><code>.cursorrules</code></td></tr>
+          <tr><td style="color:var(--fg)">Codex CLI / OpenCode</td><td><code>AGENTS.md</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note mt4">Idempotent — re-run any time to repair drifted links. A real file sitting at
+      a link path is backed up to <code>&lt;file&gt;.bak</code> first. The links themselves are
+      per-machine setup, not project source, so they're gitignored.</p>
+
+    <div class="callout mt5"><strong>Vendoring rule:</strong> third-party skills come in as git
+      submodules under <code>.friday/vendor/</code>, with the individual skill directory symlinked
+      into <code>.friday/skills/</code>. <code>vendor/</code> stays an untouched upstream clone;
+      <code>skills/</code> is the curated surface. Locally authored skills and commands are prefixed
+      <code>friday-</code> so git tracks them and leaves the generated symlinks alone.</div>
+  </div>
+</section>
+
+<!-- ============ EXTEND ============ -->
+<section id="extend">
+  <div class="wrap">
+    <p class="label">extend</p>
+    <h2>Skills and commands, in plain Markdown</h2>
+    <p>Both are just directories of Markdown. Add a file, and it shows up in the harness — no
+      plugin system, no build step, and everything is diffable.</p>
+
+    <div class="grid g2 mt6 rv">
+      <div class="term">
+        <div class="term-bar">a skill</div>
+        <div class="term-body">
+          <div class="row c" style="color:var(--fg-muted)">.friday/skills/&lt;name&gt;/SKILL.md</div>
+          <ul class="tree mt4">
+<li><span class="imp">friday-paper</span>     <span class="c">markdown → styled PDF</span></li>
+<li><span class="imp">friday-research</span>  <span class="c">structured research doc</span></li>
+<li><span class="imp">friday-mermaid-diagrams</span> <span class="c">diagram reference</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-bar">a command</div>
+        <div class="term-body">
+          <div class="row c" style="color:var(--fg-muted)">.friday/commands/&lt;name&gt;.md</div>
+          <ul class="tree mt4">
+<li><span class="imp">/friday-install</span>  <span class="c">vendor a third-party skill</span></li>
+<li><span class="imp">/friday-research</span> <span class="c">research a decision</span></li>
+<li><span class="imp">/friday-snippet</span>  <span class="c">one-pager → Notion</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <p class="note mt5">Skills work across harnesses. Slash commands are Claude Code-only today —
+      the other tools each use a different format, and no shared standard exists yet.</p>
+  </div>
+</section>
+
+<!-- ============ SETUP ============ -->
+<section id="setup">
+  <div class="wrap">
+    <p class="label">setup</p>
+    <h2>Three commands</h2>
+
+    <div class="stack mt5">
+      <div>
+        <h3>1 · Clone it</h3>
+        <div class="cmd">
+          <span class="txt"><span class="p">❯</span> git clone git@github.com:mrsauravsahu/genai-workspace.git</span>
+          <button class="copy" data-copy="git clone git@github.com:mrsauravsahu/genai-workspace.git">copy</button>
+        </div>
+      </div>
+      <div>
+        <h3>2 · Wire up your tools</h3>
+        <div class="cmd">
+          <span class="txt"><span class="p">❯</span> bash .friday/init</span>
+          <button class="copy" data-copy="bash .friday/init">copy</button>
+        </div>
+        <p class="note mt4">Asks which harnesses you use and symlinks accordingly. Point it at a
+          cloned project to wire that repo back to the same shared config:
+          <code>bash .friday/init repos/&lt;name&gt;</code></p>
+      </div>
+      <div>
+        <h3>3 · Open the workspace</h3>
+        <div class="cmd">
+          <span class="txt"><span class="p">❯</span> <b>gw</b></span>
+          <button class="copy" data-copy="gw">copy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout b mt6">Want <code>.friday/</code> everywhere? Keep the canonical copy at
+      <code>~/.friday</code> and symlink it into each project with <code>ln -s ~/.friday .friday</code>.
+      Harnesses resolve the path relative to the working directory, so a project can't point at your
+      home directory on its own. Projects needing their own rules keep a real local
+      <code>.friday/</code> instead.</div>
+
+    <p class="mt6"><a href="https://github.com/mrsauravsahu/genai-workspace">Read the source on GitHub</a>
+      · <a href="tooling-research.md">the research behind these choices</a>
+      · <a href="DESIGN.md">the design language for this page</a></p>
+  </div>
+</section>
+
+<footer><div class="wrap">
+  <span>built by <a href="https://mrsauravsahu.in">Sahu, S</a></span>
+  <span class="sp" style="margin-left:auto">
+    <a href="https://github.com/mrsauravsahu/genai-workspace">github</a>
+  </span>
+</div></footer>
+
+<script>
+document.body.classList.remove('no-js');
+
+// copy buttons — the primary CTA pattern
+document.querySelectorAll('.copy').forEach(function(b){
+  b.setAttribute('aria-live','polite');
+  b.addEventListener('click',function(){
+    navigator.clipboard.writeText(b.dataset.copy).then(function(){
+      b.textContent='copied'; b.dataset.done='1';
+      setTimeout(function(){ b.textContent='copy'; delete b.dataset.done; },1200);
+    });
+  });
+});
+
+// reveal once, never re-triggered
+if('IntersectionObserver' in window){
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+  },{rootMargin:'0px 0px -10% 0px'});
+  document.querySelectorAll('.rv').forEach(function(el){ io.observe(el); });
+}else{
+  document.querySelectorAll('.rv').forEach(function(el){ el.classList.add('in'); });
+}
+</script>
+</body>
+</html>
