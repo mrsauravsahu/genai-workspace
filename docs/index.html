@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GenAI Workspace — mock</title>
+<style>
+/* ---- MOCK ONLY: structure + tokens. No motion, no polish yet. ---- */
+:root{
+  --bg:#1a1b26; --bg-raised:#1f2335; --bg-inset:#16161e; --border:#2a2e42;
+  --fg:#c0caf5; --fg-dim:#8b93b8; --fg-muted:#565f89;
+  --blue:#7aa2f7; --cyan:#7dcfff; --green:#9ece6a; --yellow:#e0af68; --red:#f7768e;
+  --font: ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+  --s-2:8px; --s-3:12px; --s-4:16px; --s-5:24px; --s-6:32px; --s-7:48px; --s-9:112px;
+  --radius:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--fg);font:16px/1.7 var(--font)}
+.wrap{max-width:960px;margin:0 auto;padding:0 var(--s-5)}
+section{padding:var(--s-9) 0;border-bottom:1px solid var(--border)}
+h1{font-size:clamp(2rem,6vw,3.5rem);line-height:1.1}
+h2{font-size:1.5rem;margin-bottom:var(--s-5)}
+h3{font-size:1.125rem;margin-bottom:var(--s-3)}
+p{color:var(--fg-dim);max-width:68ch;margin-bottom:var(--s-4)}
+a{color:var(--blue)}
+.label{font-size:.75rem;letter-spacing:.02em;text-transform:uppercase;color:var(--fg-muted)}
+
+/* box = mock placeholder, dashed so it reads as unfinished */
+.box{border:1px dashed var(--border);border-radius:var(--radius);padding:var(--s-5);
+     color:var(--fg-muted);font-size:.875rem;background:var(--bg-raised)}
+.term{background:var(--bg-inset);border:1px solid var(--border);border-radius:var(--radius);padding:var(--s-4);font-size:.875rem}
+.cmd{background:var(--bg-inset);border:1px solid var(--border);border-radius:var(--radius);
+     padding:var(--s-3) var(--s-4);display:flex;justify-content:space-between;gap:var(--s-4)}
+.cmd b{color:var(--green);font-weight:400}
+.grid{display:grid;gap:var(--s-4)}
+.g2{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+nav{border-bottom:1px solid var(--border);padding:var(--s-3) 0;font-size:.75rem}
+nav .wrap{display:flex;gap:var(--s-4);align-items:center}
+nav .sp{margin-left:auto}
+footer{padding:var(--s-6) 0;font-size:.875rem;color:var(--fg-muted)}
+ul{list-style:none;color:var(--fg-dim);font-size:.875rem}
+li{padding:2px 0}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <span style="color:var(--green)">1:gw</span>
+  <span class="label">genai-workspace</span>
+  <a class="sp" href="#">github</a>
+  <a href="#">mrsauravsahu.in</a>
+</div></nav>
+
+<!-- HERO -->
+<section><div class="wrap">
+  <p class="label">hero</p>
+  <h1>One command.<br>One workspace.</h1>
+  <p>Sub-line: terminal-first setup for driving hosted and local AI models across Claude Code, Cursor, Codex CLI, and OpenCode. One shared source of truth, symlinked into whatever each tool expects.</p>
+  <div class="cmd"><span>❯ <b>gw</b></span><span class="label">copy</span></div>
+  <p style="margin-top:var(--s-5)"></p>
+  <div class="box" style="min-height:340px">[ hero terminal window — tmux tab strip, Neovim pane left, Claude Code session list right. Final version: screenshot or live-typed <code>gw</code> ]</div>
+</div></section>
+
+<!-- WHAT HAPPENS -->
+<section><div class="wrap">
+  <p class="label">what gw does</p>
+  <h2>Editing and AI in one screen</h2>
+  <div class="grid g3">
+    <div class="box" style="min-height:120px">[ pane: neovim ]</div>
+    <div class="box" style="min-height:120px">[ pane: claude code ]</div>
+    <div class="box" style="min-height:120px">[ pane: shell ]</div>
+  </div>
+  <p style="margin-top:var(--s-5)">Hand off a task and Claude sorts it into three states while you keep coding.</p>
+  <div class="term">
+    <ul>
+      <li><span style="color:var(--yellow)">needs input</span> — sessions with a question or a decision for you</li>
+      <li><span style="color:var(--green)">working</span> — still running, even if you close the terminal</li>
+      <li><span style="color:var(--fg-muted)">completed</span> — finished, waiting for review</li>
+    </ul>
+  </div>
+</div></section>
+
+<!-- .FRIDAY -->
+<section><div class="wrap">
+  <p class="label">the idea</p>
+  <h2>.friday — one source of truth</h2>
+  <p>Rules, MCP config, skills, and commands live once in <code>.friday/</code>. Every harness reads from its own path, so <code>.friday/init</code> symlinks the canonical files into place.</p>
+  <div class="grid g2">
+    <div class="term">
+      <ul>
+        <li style="color:var(--fg-muted)">before</li>
+        <li>.claude/ — its own rules, skills, mcp</li>
+        <li>.cursor/ — duplicated rules</li>
+        <li>.opencode/ — duplicated again</li>
+      </ul>
+    </div>
+    <div class="term">
+      <ul>
+        <li style="color:var(--fg-muted)">after</li>
+        <li style="color:var(--blue)">.friday/</li>
+        <li><span style="color:var(--cyan)">CLAUDE.md → .friday/rules.md</span></li>
+        <li><span style="color:var(--cyan)">AGENTS.md → .friday/rules.md</span></li>
+        <li><span style="color:var(--cyan)">.mcp.json → .friday/mcp.json</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="box" style="margin-top:var(--s-4)">[ file tree component — full .friday/ layout with directory + symlink coloring ]</div>
+</div></section>
+
+<!-- SETUP -->
+<section><div class="wrap">
+  <p class="label">setup</p>
+  <h2>Three commands</h2>
+  <div class="grid" style="gap:var(--s-3)">
+    <div><h3>Clone and bootstrap</h3><div class="cmd"><span>❯ bash .friday/init</span><span class="label">copy</span></div></div>
+    <div><h3>Wire an existing repo to the same setup</h3><div class="cmd"><span>❯ bash .friday/init repos/&lt;name&gt;</span><span class="label">copy</span></div></div>
+    <div><h3>Open the workspace</h3><div class="cmd"><span>❯ <b>gw</b></span><span class="label">copy</span></div></div>
+  </div>
+  <div class="box" style="margin-top:var(--s-5)">[ tab strip: claude code · cursor · codex/opencode — shows which links each tool gets ]</div>
+</div></section>
+
+<!-- EXTEND -->
+<section><div class="wrap">
+  <p class="label">extend</p>
+  <h2>Skills and commands</h2>
+  <div class="grid g2">
+    <div class="box" style="min-height:140px">[ adding a skill — vendor submodule + symlink ]</div>
+    <div class="box" style="min-height:140px">[ adding a command — /friday-snippet example ]</div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  built by <a href="https://mrsauravsahu.in">saurav sahu</a> · <a href="#">github</a>
+</div></footer>
+
+</body>
+</html>
