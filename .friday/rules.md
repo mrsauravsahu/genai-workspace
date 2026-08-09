@@ -17,6 +17,14 @@ notion: https://app.notion.com/p/<page-id>
 ---
 ```
 
+## GitHub Stars
+
+- `context/github-stars.csv` is a snapshot of the user's GitHub starred repos (repo, url, description, language, topics, stars, pushed_at, archived, lists, starred_at), grouped by the user's current GitHub star-list categories (AI & GenAI, Web/UI & Design, Backend & Languages, Cloud/DevOps & Homelab, CLI/Shell & Editor, Platforms & Desktop Apps, Dev Tools & Build/Test, Reference & Awesome Lists, plus a few personal lists).
+- `context/` is gitignored — not pushed to GitHub, same as `snippets/`, `research/`, `repos/`. Not every checkout of this repo will have `context/github-stars.csv` present, so check for its existence before relying on it.
+- When coding and a task calls for a library, CLI tool, or service (e.g. "need a Kubernetes dashboard", "need a Go CLI framework"), and the file exists, grep it before reaching for an unfamiliar dependency — the user has often already starred a relevant option. Surface the match and let the user decide whether to use it.
+- `/friday-install` also consults this file (if present) before searching the open skills ecosystem — see that command for details.
+- Stale over time (stars/pushed dates drift); regenerate via the GitHub GraphQL API (`gh api graphql`) rather than trusting old rows for recency-sensitive checks (e.g. "is this still maintained").
+
 ## Skills
 
 - Any directory inside `genai-workspace` that installs a third-party skill must vendor it under `.friday/vendor/<repo>` (git submodule) and symlink the individual skill dir(s) into `.friday/skills/<name>`, not install directly into `.claude/skills/`, `.opencode/skills/`, or similar tool-specific paths.
