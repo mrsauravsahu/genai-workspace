@@ -16,18 +16,26 @@ If the argument is already an SSH URL (or a GitHub `blob` link to a specific `SK
 skip this section and go straight to **Steps** — you know the repo and path to vendor.
 
 Otherwise the user is describing a capability, not pointing at a repo ("install a skill for
-X", "is there a skill that does X"). Discover it first with the vendored `find-skills`
-skill (`.friday/skills/find-skills`):
+X", "is there a skill that does X"). Check the user's own GitHub stars first, then fall back
+to the open ecosystem:
 
-- Invoke `find-skills` to search the open skills ecosystem (`npx skills find …`, the
-  skills.sh leaderboard) and identify the best-matching skill and its GitHub repo.
-- Follow that skill's quality checks (install count, source reputation, stars) and confirm
-  the chosen skill with the user before vendoring.
-- Take only the resolved **GitHub repo** and the **path to the skill/command** within it,
-  then continue with **Steps** below.
-- Do **not** run `npx skills add` to install — that drops the skill into a tool-specific
-  path and breaks our single-source-of-truth rule. `find-skills` is for *discovery* only;
-  vendoring is always done via the submodule steps below.
+- If `context/github-stars.csv` exists (it's gitignored, so it won't be present in every
+  checkout — check before relying on it), grep it (repo, description, topics, language,
+  lists columns) for a starred repo matching the requested capability. If a good match
+  exists, tell the user it's already starred and confirm they want to vendor that one
+  before proceeding — it's likely a better fit than a random ecosystem result since they
+  picked it deliberately.
+- Only if the file doesn't exist or nothing relevant is starred, discover it with the
+  vendored `find-skills` skill (`.friday/skills/find-skills`):
+  - Invoke `find-skills` to search the open skills ecosystem (`npx skills find …`, the
+    skills.sh leaderboard) and identify the best-matching skill and its GitHub repo.
+  - Follow that skill's quality checks (install count, source reputation, stars) and confirm
+    the chosen skill with the user before vendoring.
+  - Take only the resolved **GitHub repo** and the **path to the skill/command** within it,
+    then continue with **Steps** below.
+  - Do **not** run `npx skills add` to install — that drops the skill into a tool-specific
+    path and breaks our single-source-of-truth rule. `find-skills` is for *discovery* only;
+    vendoring is always done via the submodule steps below.
 
 ## Steps
 
