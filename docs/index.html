@@ -29,6 +29,8 @@ body{background:var(--bg);color:var(--fg);font-family:var(--font);
 .wrap{max-width:960px;margin:0 auto;padding:0 var(--s-5)}
 section{padding:var(--s-9) 0;border-bottom:1px solid var(--border)}
 h1{font-size:clamp(2rem,6vw,3.5rem);line-height:1.1;font-weight:700;letter-spacing:-.01em}
+.h1-name{display:block;color:var(--green);font-size:clamp(1.25rem,3.2vw,1.75rem);
+         letter-spacing:.02em;margin-bottom:var(--s-5)}
 h2{font-size:1.5rem;line-height:1.3;font-weight:700;margin-bottom:var(--s-4)}
 h3{font-size:1.125rem;line-height:1.4;font-weight:700;margin-bottom:var(--s-3)}
 p{color:var(--fg-dim);max-width:68ch}
@@ -62,6 +64,13 @@ nav .sp{margin-left:auto}
 .term-body{padding:var(--s-4);font-size:.875rem;line-height:1.6;overflow-x:auto}
 .term-body .row{white-space:pre;color:var(--fg-dim)}
 .hero-term{box-shadow:0 20px 60px rgba(0,0,0,.4);margin-top:var(--s-7)}
+/* the command that opened this window, typed once on load */
+.term-run{padding:var(--s-3) var(--s-4);border-bottom:1px solid var(--border);
+          font-size:.875rem;color:var(--fg-dim);white-space:nowrap;overflow:hidden}
+.term-run b{color:var(--green);font-weight:700}
+.typed{display:inline-block;vertical-align:bottom;
+       animation:type 400ms steps(2,end) 300ms both}
+@keyframes type{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
 
 /* split panes, mirrors the real gw layout: nvim 70% | agent 30% */
 .split{display:grid;grid-template-columns:7fr 3fr;min-height:300px}
@@ -111,6 +120,12 @@ nav .sp{margin-left:auto}
 .chip{font-size:.75rem;color:var(--fg-dim);background:var(--bg-inset);
       border:1px solid var(--border);padding:2px var(--s-2)}
 .chip.on{color:var(--green);border-color:rgba(158,206,106,.4)}
+/* brand marks — the only off-palette colors on the page, scoped to harness chips */
+.chip.b-claude{color:#d97757;border-color:rgba(217,119,87,.45)}
+.chip.b-opencode{color:#f2f2f2;border-color:rgba(242,242,242,.35)}
+.chip.b-codex{color:#10a37f;border-color:rgba(16,163,127,.45)}
+.chip.b-cursor{color:#a5b4fc;border-color:rgba(165,180,252,.4)}
+.chip.b-gemini{color:#4796e3;border-color:rgba(71,150,227,.45)}
 .arrow{color:var(--fg-muted);font-size:.75rem;text-align:center;padding:var(--s-1) 0}
 
 /* ---- status list ---- */
@@ -171,18 +186,14 @@ footer .wrap{display:flex;gap:var(--s-4);flex-wrap:wrap;align-items:center}
 <!-- ============ HERO ============ -->
 <section>
   <div class="wrap">
-    <h1>One terminal.<br>Any model.</h1>
+    <h1><span class="h1-name">GenAI-Workspace</span>One terminal. Any model.</h1>
     <p class="lede">A terminal-first setup for driving <strong>hosted frontier models</strong> and
       <strong>models on your own hardware</strong> through the same workflow. tmux holds the screen,
       Neovim takes the left, an agent takes the right, and every harness — Claude Code, Cursor,
       Codex CLI, OpenCode — reads its rules from one shared source of truth.</p>
 
-    <div class="cmd mt5">
-      <span class="txt"><span class="p">❯</span> <b>gw</b></span>
-      <button class="copy" data-copy="gw">copy</button>
-    </div>
-    <p class="note mt4">That's the whole entry point. Editing and AI land on one screen, in the
-      directory you're already standing in.</p>
+    <p class="note mt5">One command — <code>gw</code> — is the whole entry point. Editing and AI
+      land on one screen, in the directory you're already standing in.</p>
 
     <div class="term hero-term">
       <div class="term-bar">
@@ -193,6 +204,11 @@ footer .wrap{display:flex;gap:var(--s-4);flex-wrap:wrap;align-items:center}
         <span class="tab" style="margin-left:var(--s-3)">1:gw</span>
         <span>2:zsh</span>
         <span style="margin-left:auto">21:34</span>
+      </div>
+      <div class="term-run">
+        <span style="color:var(--cyan)">~/GenAI-Workspace</span>
+        <span style="color:var(--green)">❯</span>
+        <span class="typed"><b>gw</b></span><span class="cursor" style="margin-left:2px"></span>
       </div>
       <div class="split">
         <div>
@@ -211,7 +227,8 @@ footer .wrap{display:flex;gap:var(--s-4);flex-wrap:wrap;align-items:center}
           </div>
         </div>
         <div>
-          <div style="color:var(--fg-muted)">claude code — 30%</div>
+          <div style="color:var(--fg-muted)">genai tooling — 30%</div>
+          <div class="chips" style="margin-top:var(--s-2)"><span class="chip b-claude">claude code</span><span class="chip b-opencode">opencode</span><span class="chip b-codex">codex</span></div>
           <ul class="status mt4">
             <li style="color:var(--yellow)">needs input</li>
             <li class="note" style="padding-left:var(--s-3)">a question is waiting on you</li>
@@ -266,9 +283,9 @@ footer .wrap{display:flex;gap:var(--s-4);flex-wrap:wrap;align-items:center}
         <div class="d">Reads files, runs shell, edits repos, calls tools, loops. This is what
           <code>gw</code> puts on screen, and what <code>.friday/</code> configures. Each harness
           reads instructions from a different path — which is the problem <code>.friday/</code> solves.</div>
-        <div class="chips"><span class="chip on">Claude Code</span><span class="chip on">OpenCode</span>
-          <span class="chip">Codex CLI</span><span class="chip">Cursor</span>
-          <span class="chip">Gemini CLI</span></div>
+        <div class="chips"><span class="chip b-claude">Claude Code</span><span class="chip b-opencode">OpenCode</span>
+          <span class="chip b-codex">Codex CLI</span><span class="chip b-cursor">Cursor</span>
+          <span class="chip b-gemini">Gemini CLI</span></div>
       </div>
       <div class="arrow">↕</div>
       <div class="layer">
@@ -374,10 +391,10 @@ footer .wrap{display:flex;gap:var(--s-4);flex-wrap:wrap;align-items:center}
           <code>exec</code>s Neovim into the very pane you typed it in, so no window is wasted.</div>
       </div>
       <div class="layer">
-        <div class="hd"><span class="t">the agent</span><span class="n">30% — the right pane</span></div>
-        <div class="d">Claude Code by default, or any command you name — <code>gw . opencode</code>
-          swaps the harness without touching the layout. Narrow on purpose: it's a task queue you
-          glance at, not something you stare into.</div>
+        <div class="hd"><span class="t">genai tooling</span><span class="n">30% — the right pane</span></div>
+        <div class="d">Claude Code, OpenCode or Codex — whichever harness you're driving, it gets
+          the same slot and the same rules from <code>.friday/</code>. Narrow on purpose: it's a
+          task queue you glance at, not something you stare into.</div>
       </div>
     </div>
 
@@ -401,11 +418,11 @@ footer .wrap{display:flex;gap:var(--s-4);flex-wrap:wrap;align-items:center}
       </div>
       <div>
         <div class="cmd">
-          <span class="txt"><span class="p">❯</span> <b>gw</b> . opencode</span>
-          <button class="copy" data-copy="gw . opencode">copy</button>
+          <span class="txt"><span class="p">❯</span> <b>gw-pick</b></span>
+          <button class="copy" data-copy="gw-pick">copy</button>
         </div>
-        <p class="note mt4">Same layout, different harness. There's also a
-          <code>gw-pick</code> fzf popup bound in tmux for browsing to a directory first.</p>
+        <p class="note mt4">Don't know the path yet. An fzf popup, bound in tmux, browses
+          directories and hands the one you pick straight to <code>gw</code>.</p>
       </div>
     </div>
   </div>
@@ -574,7 +591,7 @@ footer .wrap{display:flex;gap:var(--s-4);flex-wrap:wrap;align-items:center}
 </section>
 
 <footer><div class="wrap">
-  <span>built by <a href="https://mrsauravsahu.in">saurav sahu</a></span>
+  <span>built by <a href="https://mrsauravsahu.in">Sahu, S</a></span>
   <span class="sp" style="margin-left:auto">
     <a href="https://github.com/mrsauravsahu/genai-workspace">github</a>
   </span>

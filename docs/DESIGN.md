@@ -56,6 +56,20 @@ Taken directly from the terminal so the site and the screenshots never disagree.
 | `--red` | `#f7768e` | Errors, destructive, `~/` root marker |
 | `--purple` | `#bb9af7` | Keywords, rare emphasis |
 
+#### Brand marks — the one exception
+
+Harness chips carry their own product color, since recognising them at a glance beats palette purity:
+
+| Chip | Value |
+|---|---|
+| Claude Code | `#d97757` |
+| OpenCode | `#f2f2f2` |
+| Codex CLI | `#10a37f` |
+| Cursor | `#a5b4fc` |
+| Gemini CLI | `#4796e3` |
+
+These are the only off-palette colors on the page. They apply to text and border on `.chip` and nowhere else — never as a fill, a heading, a link, or a section accent.
+
 Rules:
 - One accent per section. Mixing blue and green in the same block reads as syntax highlighting, not hierarchy.
 - Status colors are reserved: green = done, yellow = waiting on you, red = failed. Never use them decoratively.
