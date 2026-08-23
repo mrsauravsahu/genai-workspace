@@ -44,6 +44,10 @@ notion: https://app.notion.com/p/<page-id>
 ## Git
 
 - Use SSH remotes (`git@github.com:owner/repo.git`) for all clone/remote operations, not HTTPS.
+- Before opening a PR, check that `gh` is installed. If it is not, do **not** reach for
+  another route (API tokens, credential helpers, installing `gh`) — ask the user to confirm
+  pushing the branch, push it, and give them the `pull/new/<branch>` link so they open the
+  PR themselves.
 
 ## Repos
 
