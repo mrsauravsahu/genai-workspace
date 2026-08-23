@@ -32,3 +32,8 @@
 	url = git@github.com:wshobson/agents.git
 	shallow = true
 	fridaySymlink = plugins/ui-design/skills/design-system-patterns
+[submodule ".friday/vendor/diagram-design"]
+	path = .friday/vendor/diagram-design
+	url = git@github.com:cathrynlavery/diagram-design.git
+	shallow = true
+	fridaySymlink = skills/diagram-design
