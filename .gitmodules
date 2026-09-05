@@ -37,3 +37,8 @@
 	url = git@github.com:cathrynlavery/diagram-design.git
 	shallow = true
 	fridaySymlink = skills/diagram-design
+[submodule ".friday/vendor/anthropic-skills"]
+	path = .friday/vendor/anthropic-skills
+	url = git@github.com:anthropics/skills.git
+	shallow = true
+	fridaySymlink = skills/canvas-design
