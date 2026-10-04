@@ -31,5 +31,17 @@ for link in "${LINKS[@]}"; do
   fi
 done
 
+# Codex skill/prompt links created by .friday/init (one symlink per entry,
+# pointing back into .friday/). Only symlinks are removed; real files and the
+# directories themselves are left alone.
+for dir in ".agents/skills" "$HOME/.codex/prompts"; do
+  [ -d "$dir" ] || continue
+  for link in "$dir"/*; do
+    [ -L "$link" ] || continue
+    rm -f "$link"
+    echo "removed $link"
+  done
+done
+
 echo
 echo "done. cleanup complete."

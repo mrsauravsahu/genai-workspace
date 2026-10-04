@@ -45,28 +45,86 @@ relpath() {
   echo "$back${target#"$common"/}"
 }
 
-# link <target-under-.friday, e.g. ".friday/rules.md"> <link-path-relative-to-TARGET>
-link() {
-  local target="$1" link="$2"
-  local linkpath="$TARGET/$link"
-  mkdir -p "$(dirname "$linkpath")"
+# relink <src-absolute> <dst-absolute> <display-label>
+# Create/repair a symlink, backing up any real file/dir already at <dst>.
+# Idempotent: re-pointing to the same target is a no-op.
+relink() {
+  local src="$1" dst="$2" label="$3"
+  mkdir -p "$(dirname "$dst")"
   local dest
-  dest="$(relpath "$ROOT/$target" "$(dirname "$linkpath")")"
+  dest="$(relpath "$src" "$(dirname "$dst")")"
 
-  if [ -L "$linkpath" ] && [ "$(readlink "$linkpath")" = "$dest" ]; then
-    echo "ok    $link -> $dest"
+  if [ -L "$dst" ] && [ "$(readlink "$dst")" = "$dest" ]; then
+    echo "ok    $label -> $dest"
     return
   fi
 
   # A real file/dir sits here — back it up before replacing.
-  if [ -e "$linkpath" ] && [ ! -L "$linkpath" ]; then
-    mv "$linkpath" "$linkpath.bak"
-    echo "backup $link -> $link.bak"
+  if [ -e "$dst" ] && [ ! -L "$dst" ]; then
+    mv "$dst" "$dst.bak"
+    echo "backup $label -> $label.bak"
   fi
 
-  rm -f "$linkpath"
-  ln -s "$dest" "$linkpath"
-  echo "link  $link -> $dest"
+  rm -f "$dst"
+  ln -s "$dest" "$dst"
+  echo "link  $label -> $dest"
+}
+
+# link <target-under-.friday, e.g. ".friday/rules.md"> <link-path-relative-to-TARGET>
+link() {
+  local target="$1" link="$2"
+  relink "$ROOT/$target" "$TARGET/$link" "$link"
+}
+
+# Codex reads repo-scoped skills from `.agents/skills` and follows symlinked
+# skill folders. Mirror `.friday/skills` there one symlink per skill (rather
+# than symlinking the directory wholesale) so Codex's guaranteed per-folder
+# symlink handling applies and any repo-local `.agents/skills` entries coexist.
+link_codex_skills() {
+  local skills="$TARGET/.agents/skills"
+  mkdir -p "$skills"
+
+  # Drop stale links whose source skill no longer exists under .friday/skills.
+  local name
+  for name in "$skills"/*; do
+    [ -L "$name" ] || continue
+    [ -e "$FRIDAY_DIR/skills/$(basename "$name")" ] && continue
+    rm -f "$name"
+    echo "drop  .agents/skills/$(basename "$name")"
+  done
+
+  local src
+  for src in "$FRIDAY_DIR"/skills/*; do
+    [ -e "$src" ] || continue
+    name="$(basename "$src")"
+    relink "$FRIDAY_DIR/skills/$name" "$skills/$name" ".agents/skills/$name"
+  done
+}
+
+# Codex has no repo-scoped slash-command directory; its equivalent is custom
+# prompts under ~/.codex/prompts (invoked as `/prompts:<name>`). The Claude
+# command frontmatter (`description`, `argument-hint`) and `$ARGUMENTS` are
+# compatible, so link each .friday/commands/*.md there. This is user-scoped,
+# shared by every repo this hub bootstraps, and note: custom prompts are
+# deprecated upstream in favour of skills.
+link_codex_prompts() {
+  local prompts="$HOME/.codex/prompts"
+  mkdir -p "$prompts"
+
+  local name
+  for name in "$prompts"/*; do
+    [ -L "$name" ] || continue
+    [ -e "$FRIDAY_DIR/commands/$(basename "$name")" ] && continue
+    rm -f "$name"
+    echo "drop  ~/.codex/prompts/$(basename "$name")"
+  done
+
+  local src
+  for src in "$FRIDAY_DIR"/commands/*; do
+    [ -e "$src" ] || continue
+    name="$(basename "$src")"
+    relink "$FRIDAY_DIR/commands/$name" "$prompts/$name" "~/.codex/prompts/$name"
+  done
 }
 
 # Check out any submodule that declares a `fridaySymlink` but hasn't been
@@ -158,9 +216,12 @@ if ask "Cursor?"; then
   TRANSLATE+=("Cursor (.cursor/settings.json)")
 fi
 
-if ask "Codex CLI / OpenCode (AGENTS.md)?"; then
+if ask "Codex CLI / OpenCode?"; then
   link ".friday/rules.md" "AGENTS.md"
-  TRANSLATE+=("Codex CLI / OpenCode (.codex/config.toml, .opencode/opencode.json)")
+  link_codex_skills
+  link_codex_prompts
+  TRANSLATE+=("Codex CLI (.codex/config.toml)")
+  TRANSLATE+=("OpenCode (.opencode/opencode.json)")
 fi
 
 echo

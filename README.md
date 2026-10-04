@@ -45,7 +45,8 @@ Prompts for which tooling you use (Claude Code, Cursor, Codex CLI/OpenCode) and 
 |---|---|
 | Claude Code | `CLAUDE.md`, `.mcp.json`, `.claude/skills`, `.claude/commands` |
 | Cursor | `.cursorrules` |
-| Codex CLI / OpenCode | `AGENTS.md` |
+| Codex CLI | `AGENTS.md`, `.agents/skills/*`, `~/.codex/prompts/*` |
+| OpenCode | `AGENTS.md` |
 
 Idempotent: re-run any time to fix drifted links. If a real file already exists at a link path, it's backed up to `<file>.bak` before being replaced. The generated links are per-user setup, not project source, so they're gitignored.
 
@@ -82,7 +83,9 @@ Command body. Instructions Claude Code follows when you run /friday-snippet.
 
 One example already in the repo: `/friday-snippet` turns a topic into a one-pager under `snippets/` (gitignored, never pushed).
 
-`.friday/init` symlinks `.friday/commands` → `.claude/commands`, so any file added here becomes a `/name` slash command in Claude Code automatically. No cross-tool equivalent exists yet: Cursor and other harnesses use different formats, so commands only work in Claude Code today.
+`.friday/init` symlinks `.friday/commands` → `.claude/commands`, so any file added here becomes a `/name` slash command in Claude Code automatically.
+
+Codex CLI gets a best-effort bridge: the same frontmatter (`description`, `argument-hint`) and `$ARGUMENTS` are valid in Codex's custom-prompts format, so `.friday/init` also links each `.friday/commands/*.md` into `~/.codex/prompts/`, where they're invoked as `/prompts:<name>`. Custom prompts are user-scoped (not repo-scoped) and deprecated upstream in favor of skills, so treat this as a convenience shim rather than a full first-class Codex equivalent. Cursor and other harnesses don't have a matching format, so commands remain Claude Code-first.
 
 ### Editing rules
 
