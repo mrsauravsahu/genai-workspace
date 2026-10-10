@@ -3,6 +3,9 @@ research/
 clones/
 repos/
 context/
+
+# Git worktrees created by the friday-impl workflow (branch name == dir name).
+/w
 .envrc
 agent.envrc
 
