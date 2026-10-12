@@ -10,6 +10,19 @@ Background research and tooling comparison that led to this setup: [docs/tooling
 
 Project conventions (git, snippets, coding style) live in [.friday/rules.md](.friday/rules.md), the source of truth symlinked as `CLAUDE.md` / `AGENTS.md` / `.cursorrules`.
 
+### Configuring `gw`
+
+`gw` reads its editor and agent harness from `.friday/config.json` at the workspace root:
+
+```json
+{ "editor": "nvim", "harness": "claude agents" }
+```
+
+- `editor` — `code` or `nvim`.
+- `harness` — `opencode`, `claude agents`, or `cursor-agent`.
+
+A second argument (`gw <dir> <harness>`) or `$GW_EDITOR` overrides the file; a missing file falls back to `nvim` / `claude agents`. Point `$GW_CONFIG` at a different file to override the location.
+
 ## .friday: shared source of truth
 
 `.friday/` holds everything shared across harnesses (rules, MCP config, skills, commands) in one place instead of scattered across `.claude/`, `.opencode/`, `.cursor/`, etc. Each harness reads from its own path, so `.friday/init` symlinks the canonical files into place.
@@ -26,6 +39,7 @@ This repo's `.friday/` directory carries the same name because it's the same ide
 │   ├── init          # bootstrap script — creates the symlinks below
 │   ├── cleanup       # removes symlinks .friday/init created
 │   ├── rules.md      # source of truth for instructions, symlinked as CLAUDE.md / AGENTS.md / .cursorrules
+│   ├── config.json   # gw editor + agent harness (see "Configuring gw")
 │   ├── mcp.json      # MCP server definitions, symlinked as .mcp.json
 │   ├── skills/       # curated skills surface, symlinked into .claude/skills
 │   ├── commands/     # Claude Code-formatted slash commands, symlinked into .claude/commands
