@@ -1,16 +1,42 @@
 #! /usr/bin/env zsh
-# gw [dir] [ai] — genai-workspace: split nvim (70%) | agent (30%) side by side in
-#                 the TOP-LEVEL tmux (default socket).
-#   dir : directory to open in                (default: current dir)
-#   ai  : "claude agents" | opencode | <cmd>  (default: "claude agents")
+# gw [dir] [ai] — genai-workspace: split editor (70%) | agent harness (30%) side by
+#                 side in the TOP-LEVEL tmux (default socket).
+#   dir : directory to open                (default: current dir)
+#   ai  : harness command                  (default: config "harness")
+#
+# Editor and harness defaults come from the hub's .friday/config.json, where the
+# hub is the GenAI-Workspace root this script lives in (<hub>/scripts/gw):
+#
+#   { "editor": "nvim", "harness": "claude agents" }
+#     editor  : "code" | "nvim"
+#     harness : "opencode" | "claude agents" | "cursor-agent"
+#
+# Precedence: $GW_EDITOR / second argument > config.json > built-in defaults.
+# Override the config path with $GW_CONFIG. Missing config or a missing jq just
+# falls back to the built-in defaults (nvim | claude agents).
 #
 # If dir is the CURRENT directory (`gw` / `gw .`), reuse the CURRENT tab: the AI
-# splits in on the right and nvim takes over this pane. Any OTHER dir opens a new
-# tab so unrelated workspaces stay separate.
+# splits in on the right and the editor takes over this pane. Any OTHER dir opens a
+# new tab so unrelated workspaces stay separate.
 emulate -L zsh
 
+# --- config: editor + harness from <hub>/.friday/config.json -------------------
+hub="${${0:A}:h:h}"                            # <hub>/scripts/gw -> <hub>
+cfg="${GW_CONFIG:-$hub/.friday/config.json}"
+editor=nvim
+ai="claude agents"
+# `jq -s` slurps the whole file and `.[0]` takes the FIRST object, so a config with
+# a stray second object can't yield a multi-line value (which tmux would run as a
+# command list, launching one harness after another).
+if [[ -r "$cfg" ]]; then
+  e=$(jq -rs '.[0].editor  // empty' "$cfg" 2>/dev/null); [[ -n "$e" ]] && editor="$e"
+  h=$(jq -rs '.[0].harness // empty' "$cfg" 2>/dev/null); [[ -n "$h" ]] && ai="$h"
+fi
+
+# env / positional arguments beat the config file
+editor="${GW_EDITOR:-$editor}"
+ai="${2:-$ai}"
 dir="${1:-$PWD}"
-ai="${2:-claude agents}"
 dir="${dir:A}"
 [[ -d "$dir" ]] || { print -u2 "gw: no such dir: $dir"; exit 1 }
 
@@ -28,19 +54,19 @@ $tm has-session 2>/dev/null || { print -u2 "gw: top-level tmux not running"; exi
 
 # Same directory + a real top-level tmux client (not nested inside nvim's -L vim
 # server): reuse the CURRENT tab instead of opening a new one. Split the AI in on
-# the right, then `exec nvim` so this very pane — the one running gw — becomes the
-# nvim editor. When run from inside nvim (nesting >= 2) we can't sensibly reuse
-# the nested tab, so fall through to the new-tab path below.
+# the right, then `exec` the editor so this very pane — the one running gw —
+# becomes the editor. When run from inside nvim (nesting >= 2) we can't sensibly
+# reuse the nested tab, so fall through to the new-tab path below.
 if [[ "$dir" == "${PWD:A}" && -n "$TMUX" && "${TMUX_NESTING_LEVEL:-0}" -lt 2 ]]; then
   $tm split-window -h -l 30% -c "$dir" "$ai" || exit 1
   $tm select-pane -L
   cd "$dir" || exit 1
-  exec nvim
+  exec ${=editor}
 fi
 
 # Create the tab first; bail loudly if it fails so we never fall back to
 # splitting the current window (which would run the agent in the wrong tab).
-pane=$($tm new-window -P -F '#{pane_id}' -c "$dir" -n "$wname" nvim) || exit 1
+pane=$($tm new-window -P -F '#{pane_id}' -c "$dir" -n "$wname" "$editor") || exit 1
 [[ -n "$pane" ]] || { print -u2 "gw: could not open top-level window"; exit 1 }
 
 $tm split-window -h -l 30% -t "$pane" -c "$dir" "$ai"
