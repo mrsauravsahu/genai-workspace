@@ -15,15 +15,16 @@ Project conventions (git, snippets, coding style) live in [.friday/rules.md](.fr
 `gw` reads its editor and agent harness from `.friday/config.json` at the workspace root:
 
 ```json
-{ "editor": "nvim", "harness": "claude agents" }
+{ "editor": "nvim", "harness": "claude agents", "settings": { "openHarnessInEditor": true } }
 ```
 
 - `editor` — `code` or `nvim`.
 - `harness` — `opencode`, `claude agents`, or `cursor-agent`.
+- `settings.openHarnessInEditor` — `true` runs the harness inside nvim (below); `false` or missing keeps it in its own tmux pane.
 
 A second argument (`gw <dir> <harness>`) or `$GW_EDITOR` overrides the file; a missing file falls back to `nvim` / `claude agents`. Point `$GW_CONFIG` at a different file to override the location.
 
-With `nvim`, `gw` opens one tmux pane and nvim runs the harness as a right-hand split (`<A-c>` toggles it). A dir inside the workspace opens nvim at the workspace root, then `:cd`s into it: `gw ~/GenAI-Workspace/repos/friday` starts at `~/GenAI-Workspace` and runs `:cd repos/friday`. With `code`, the harness gets its own tmux pane on the right.
+With `openHarnessInEditor` and `nvim`, `gw` opens one tmux pane and nvim runs the harness as a right-hand split (`<A-c>` toggles it). A dir inside the workspace opens nvim at the workspace root, then `:cd`s into it: `gw ~/GenAI-Workspace/repos/friday` starts at `~/GenAI-Workspace` and runs `:cd repos/friday`. Otherwise (or with `code`) the editor and harness sit side by side in two tmux panes.
 
 ## .friday: shared source of truth
 

@@ -4,18 +4,21 @@
 #   dir : directory to open                (default: current dir)
 #   ai  : harness command                  (default: config "harness")
 #
-# nvim: one pane. nvim opens the harness itself as a right-hand split
-#       (custom.harness in nvim-config). A dir inside the hub opens nvim at the
-#       hub root and then `:cd`s into it, e.g. `gw ~/GenAI-Workspace/repos/friday`
-#       starts at ~/GenAI-Workspace and runs `:cd repos/friday`.
-# code: editor (70%) | harness (30%) as two tmux panes.
+# Default: editor (70%) | harness (30%) as two tmux panes.
+# settings.openHarnessInEditor (nvim only): one pane; nvim opens the harness
+#       itself as a right-hand split (custom.harness in nvim-config). A dir
+#       inside the hub opens nvim at the hub root and then `:cd`s into it, e.g.
+#       `gw ~/GenAI-Workspace/repos/friday` starts at ~/GenAI-Workspace and runs
+#       `:cd repos/friday`.
 #
 # Editor and harness defaults come from the hub's .friday/config.json, where the
 # hub is the GenAI-Workspace root this script lives in (<hub>/scripts/gw):
 #
-#   { "editor": "nvim", "harness": "claude agents" }
+#   { "editor": "nvim", "harness": "claude agents",
+#     "settings": { "openHarnessInEditor": true } }
 #     editor  : "code" | "nvim"
 #     harness : "opencode" | "claude agents" | "cursor-agent"
+#     settings.openHarnessInEditor : true | false (default false)
 #
 # Precedence: $GW_EDITOR / second argument > config.json > built-in defaults.
 # Override the config path with $GW_CONFIG. Missing config or a missing jq just
@@ -31,12 +34,14 @@ hub="${${0:A}:h:h}"                            # <hub>/scripts/gw -> <hub>
 cfg="${GW_CONFIG:-$hub/.friday/config.json}"
 editor=nvim
 ai="claude agents"
+in_editor=false
 # `jq -s` slurps the whole file and `.[0]` takes the FIRST object, so a config with
 # a stray second object can't yield a multi-line value (which tmux would run as a
 # command list, launching one harness after another).
 if [[ -r "$cfg" ]]; then
   e=$(jq -rs '.[0].editor  // empty' "$cfg" 2>/dev/null); [[ -n "$e" ]] && editor="$e"
   h=$(jq -rs '.[0].harness // empty' "$cfg" 2>/dev/null); [[ -n "$h" ]] && ai="$h"
+  [[ $(jq -rs '.[0].settings.openHarnessInEditor' "$cfg" 2>/dev/null) == true ]] && in_editor=true
 fi
 
 # env / positional arguments beat the config file
@@ -61,7 +66,7 @@ $tm has-session 2>/dev/null || { print -u2 "gw: top-level tmux not running"; exi
 # nvim runs the harness inside itself, so it gets no tmux split. Tell it which
 # harness and where to `:cd` through env vars (GW_HARNESS, GW_CD) rather than
 # splicing paths into a command string.
-if [[ "${editor%% *}" == nvim ]]; then
+if [[ "$in_editor" == true && "${editor%% *}" == nvim ]]; then
   root="$dir" rel=""
   # :l — macOS paths are case-insensitive, and :A keeps the case as typed.
   if [[ "${dir:l}" == "${hub:l}" ]]; then

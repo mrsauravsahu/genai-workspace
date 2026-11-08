@@ -1,5 +1,7 @@
 {
   "editor": "nvim",
-  "harness": "opencode"
+  "harness": "opencode",
+  "settings": {
+    "openHarnessInEditor": true
+  }
 }
-
