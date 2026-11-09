@@ -3,6 +3,11 @@
     "notion": {
       "type": "http",
       "url": "https://mcp.notion.com/mcp"
+    },
+    "editor": {
+      "type": "stdio",
+      "command": "nvim-mcp",
+      "args": ["--connect", "auto"]
     }
   }
 }
