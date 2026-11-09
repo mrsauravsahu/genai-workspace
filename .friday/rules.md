@@ -41,6 +41,13 @@ notion: https://app.notion.com/p/<page-id>
 - Every other tool gets it *translated*, not symlinked: after `.friday/init`, ask the agent to translate `.friday/settings.json` into each selected tool's own config format and path. Options with no equivalent are dropped, not invented — the agent should say which it dropped.
 - `.claude/settings.local.json` stays local and untracked; it's per-machine, not part of the canonical set.
 
+## Editor
+
+- The harness usually runs alongside an editor, which `gw` starts: the `editor` set in `.friday/config.json` (nvim, VS Code, Cursor, …), with the harness in a split next to it or inside it.
+- When asked to "open"/"show" a file, open it in that connected editor with `<hub>/scripts/gw-open <file>...`, whichever editor it is. It reuses the running editor window (see the script header for how it finds each editor).
+- Never spawn a new editor instance, tmux window, or pane to show a file. If `gw-open` fails, say so and give the path.
+- mrsauravsahu currently uses nvim with Claude Code running in nvim's harness split.
+
 ## Git
 
 - Use SSH remotes (`git@github.com:owner/repo.git`) for all clone/remote operations, not HTTPS.

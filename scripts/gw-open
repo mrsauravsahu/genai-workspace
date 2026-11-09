@@ -1,0 +1,50 @@
+#! /usr/bin/env zsh
+# gw-open <file>... — open files in the editor this harness is connected to,
+#                     instead of spawning a new editor / tmux window.
+#
+# Editor: $GW_EDITOR > "editor" in <hub>/.friday/config.json (as gw) > nvim.
+# A harness running inside nvim ($NVIM set) always targets that nvim.
+#
+#   nvim         : the running nvim, over RPC; custom.harness (nvim-config)
+#                  edits in its editor window, not the harness split. Found via
+#                  $GW_NVIM_SERVER, then $NVIM (set inside nvim's :terminal),
+#                  then the `@nvim_server` option custom.harness sets on its tmux
+#                  pane (this pane's window in tmux, else the top-level tmux's
+#                  current window) — for shells that don't inherit $NVIM, e.g.
+#                  an agent's background jobs.
+#   code/cursor/…: the editor's CLI with -r (--reuse-window), which from its
+#                  integrated terminal targets the window that terminal is in.
+#   anything else: `<editor> <file>...`.
+emulate -L zsh
+
+(( $# )) || { print -u2 "usage: gw-open <file>..."; exit 2 }
+
+hub="${${0:A}:h:h}"                            # <hub>/scripts/gw-open -> <hub>
+cfg="${GW_CONFIG:-$hub/.friday/config.json}"
+editor=nvim
+if [[ -r "$cfg" ]]; then
+  e=$(jq -rs '.[0].editor // empty' "$cfg" 2>/dev/null); [[ -n "$e" ]] && editor="$e"
+fi
+editor="${GW_EDITOR:-$editor}"
+
+server="${GW_NVIM_SERVER:-$NVIM}"
+if [[ -z "$server" && "${editor%% *}" == nvim ]]; then
+  target=()
+  [[ -n "$TMUX_PANE" ]] && target=(-t "$TMUX_PANE")
+  server=$(tmux -L default list-panes $target -F '#{@nvim_server}' 2>/dev/null | grep -m1 .)
+  [[ -n "$server" ]] || { print -u2 "gw-open: no connected nvim (start it with gw)"; exit 1 }
+fi
+
+if [[ -n "$server" ]]; then
+  for f in "$@"; do
+    p=${f:a}; p=${p//"'"/"''"}                 # vimscript '...' escapes ' as ''
+    nvim --server "$server" \
+      --remote-expr "luaeval('require(\"custom.harness\").open(_A)', '$p')" >/dev/null || exit 1
+  done
+  exit 0
+fi
+
+case "${editor%% *}" in
+  code|code-insiders|codium|cursor|windsurf) exec ${=editor} -r "$@" ;;
+  *) exec ${=editor} "$@" ;;
+esac
