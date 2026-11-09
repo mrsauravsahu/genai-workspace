@@ -43,10 +43,10 @@ notion: https://app.notion.com/p/<page-id>
 
 ## Editor
 
-- The harness usually runs alongside an editor, which `gw` starts: the `editor` set in `.friday/config.json` (nvim, VS Code, Cursor, …), with the harness in a split next to it or inside it.
-- When asked to "open"/"show" a file, open it in that connected editor with `<hub>/scripts/gw-open <file>...`, whichever editor it is. It reuses the running editor window (see the script header for how it finds each editor).
-- Never spawn a new editor instance, tmux window, or pane to show a file. If `gw-open` fails, say so and give the path.
-- mrsauravsahu currently uses nvim with Claude Code running in nvim's harness split.
+- The harness and the user's editor work together over MCP. `.friday/mcp.json` registers the connected editor's MCP server under the fixed name `editor`, so every harness reaches it the same way whatever the editor (nvim, VS Code, Cursor, …). `editor` in `.friday/config.json` says which editor it is; `gw` starts it alongside the harness.
+- Use the `editor` server to work in the user's editor: open/show files, read open buffers and selections, diagnostics, LSP. Never spawn a new editor instance, tmux window, or pane to show a file.
+- If there is no `editor` server, or it can't connect to the running editor: don't guess — ask the user which editor they use and which MCP server connects to it, then record it as `editor` in `.friday/mcp.json` (and `editor` in `.friday/config.json`).
+- mrsauravsahu currently uses nvim with Claude Code. Its `editor` server is [`nvim-mcp`](https://github.com/linw1995/nvim-mcp) (`--connect auto` attaches to the nvim whose git root matches the harness's); the nvim side is the `linw1995/nvim-mcp` plugin in nvim-config, and the binary comes from `cargo install nvim-mcp`.
 
 ## Git
 
