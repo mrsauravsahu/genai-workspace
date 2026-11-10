@@ -2,6 +2,6 @@
   "editor": "nvim",
   "harnessTemplateCommand": "claude agents --add-dir {{hub}}",
   "settings": {
-    "openHarnessInEditor": true
+    "openHarnessInEditor": false
   }
 }

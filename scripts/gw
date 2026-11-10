@@ -4,7 +4,7 @@
 #   dir : directory to open                (default: current dir)
 #   ai  : harness command                  (default: config "harness")
 #
-# Default: editor (70%) | harness (30%) as two tmux panes.
+# Default: editor (60%) | harness (40%) as two tmux panes, harness on the right.
 # settings.openHarnessInEditor (nvim only): one pane; nvim opens the harness
 #       itself as a right-hand split (custom.harness in nvim-config). A dir
 #       inside the hub opens nvim at the hub root and then `:cd`s into it, e.g.
@@ -100,7 +100,7 @@ fi
 # becomes the editor. When run from inside nvim (nesting >= 2) we can't sensibly
 # reuse the nested tab, so fall through to the new-tab path below.
 if [[ "$dir" == "${PWD:A}" && -n "$TMUX" && "${TMUX_NESTING_LEVEL:-0}" -lt 2 ]]; then
-  $tm split-window -h -l 30% -c "$dir" "$ai" || exit 1
+  $tm split-window -h -l 40% -c "$dir" "$ai" || exit 1
   $tm select-pane -L
   cd "$dir" || exit 1
   exec ${=editor}
@@ -111,7 +111,7 @@ fi
 pane=$($tm new-window -P -F '#{pane_id}' -c "$dir" -n "$wname" "$editor") || exit 1
 [[ -n "$pane" ]] || { print -u2 "gw: could not open top-level window"; exit 1 }
 
-$tm split-window -h -l 30% -t "$pane" -c "$dir" "$ai"
+$tm split-window -h -l 40% -t "$pane" -c "$dir" "$ai"
 $tm select-pane   -t "$pane"
 $tm select-window -t "$pane"
 
