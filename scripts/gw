@@ -18,6 +18,9 @@
 #     "settings": { "openHarnessInEditor": true } }
 #     editor  : "code" | "nvim"
 #     harness : "opencode" | "claude agents" | "cursor-agent"
+#     harnessTemplateCommand : supersedes harness; {{hub}} expands to the hub
+#       root, e.g. "claude agents --add-dir {{hub}}" so a session started in
+#       repos/<repo> also loads the hub's skills and commands.
 #     settings.openHarnessInEditor : true | false (default false)
 #
 # Precedence: $GW_EDITOR / second argument > config.json > built-in defaults.
@@ -40,13 +43,14 @@ in_editor=false
 # command list, launching one harness after another).
 if [[ -r "$cfg" ]]; then
   e=$(jq -rs '.[0].editor  // empty' "$cfg" 2>/dev/null); [[ -n "$e" ]] && editor="$e"
-  h=$(jq -rs '.[0].harness // empty' "$cfg" 2>/dev/null); [[ -n "$h" ]] && ai="$h"
+  h=$(jq -rs '.[0].harnessTemplateCommand // .[0].harness // empty' "$cfg" 2>/dev/null); [[ -n "$h" ]] && ai="$h"
   [[ $(jq -rs '.[0].settings.openHarnessInEditor' "$cfg" 2>/dev/null) == true ]] && in_editor=true
 fi
 
 # env / positional arguments beat the config file
 editor="${GW_EDITOR:-$editor}"
 ai="${2:-$ai}"
+ai="${ai//\{\{hub\}\}/${(q)hub}}"              # template: {{hub}} -> hub root
 dir="${1:-$PWD}"
 dir="${dir:A}"
 [[ -d "$dir" ]] || { print -u2 "gw: no such dir: $dir"; exit 1 }
