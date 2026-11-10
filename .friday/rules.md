@@ -62,6 +62,11 @@ notion: https://app.notion.com/p/<page-id>
 - Cloned GitHub projects live under `repos/` (each cloned via SSH), so they can be reused across tasks.
 - `repos/` is gitignored — not pushed to GitHub.
 
+## Worktrees
+
+- Work in the main checkout, not in a git worktree, for repos that say so in their own `AGENTS.md`/`CLAUDE.md`. The `friday-impl` skill defaults to a worktree, but the repo's own rule wins — skip the worktree step there.
+- `repos/friday` is the first: the `automated-video-editing` app runs from its main checkout (the dev server serves `src`/`server`/`ui` from it, and `projects/`/`library/` live there too), so a worktree branch is invisible to the running app.
+
 ## Notes to self
 
 - Keep persistent project preferences and conventions in this `CLAUDE.md` (project folder), not in a separate memory directory.
