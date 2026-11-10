@@ -24,7 +24,7 @@ Project conventions (git, snippets, coding style) live in [.friday/rules.md](.fr
 
 A second argument (`gw <dir> <harness>`) or `$GW_EDITOR` overrides the file; a missing file falls back to `nvim` / `claude agents`. Point `$GW_CONFIG` at a different file to override the location.
 
-With `openHarnessInEditor` and `nvim`, `gw` opens one tmux pane and nvim runs the harness as a right-hand split (`<A-c>` toggles it). A dir inside the workspace opens nvim at the workspace root, then `:cd`s into it: `gw ~/GenAI-Workspace/repos/friday` starts at `~/GenAI-Workspace` and runs `:cd repos/friday`. Otherwise (or with `code`) the editor and harness sit side by side in two tmux panes.
+With `openHarnessInEditor` and `nvim`, `gw` opens one tmux pane and nvim runs the harness as a right-hand split (`<A-c>` toggles it). A dir inside the workspace opens nvim at the workspace root, then `:cd`s into it: `gw ~/GenAI-Workspace/repos/friday` starts at `~/GenAI-Workspace` and runs `:cd repos/friday`. Otherwise (or with `code`) the editor (60%) and harness (40%, on the right) sit side by side in two tmux panes — the default, and what `.friday/config.json` uses.
 
 ## .friday: shared source of truth
 
