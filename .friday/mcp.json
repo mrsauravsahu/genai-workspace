@@ -6,8 +6,8 @@
     },
     "editor": {
       "type": "stdio",
-      "command": "nvim-mcp",
-      "args": ["--connect", "auto"]
+      "command": "./scripts/editor-mcp",
+      "args": []
     }
   }
 }
