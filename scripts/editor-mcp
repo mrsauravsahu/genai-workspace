@@ -1,0 +1,158 @@
+#!/usr/bin/env python3
+"""editor-mcp — the hub's `editor` MCP server, cut down to one tool: open_file.
+
+It runs a native `:edit <file>` in the user's nvim, in an editor window rather
+than whichever window has focus. While you type to the harness that is the
+harness split itself, and a plain `:e` would swap the file in over it. Focus
+stays put, so opening a file never pulls you out of the conversation.
+
+Which nvim: $NVIM, which nvim sets for everything started from its terminals,
+including the harness split (custom.harness) and the MCP servers the harness
+spawns. Without it (a harness outside nvim), it falls back to a running nvim with
+a UI attached, preferring the one whose cwd contains the file.
+
+Speaks MCP over stdio (newline-delimited JSON-RPC). Needs only python3 and nvim.
+"""
+
+import glob
+import json
+import os
+import subprocess
+import sys
+import tempfile
+
+# Runs inside nvim via luaeval, with _A = { path, line }.
+OPEN_LUA = r"""
+(function(path, line)
+  local function editable(w)
+    local b = vim.api.nvim_win_get_buf(w)
+    return vim.api.nvim_win_get_config(w).relative == ""
+      and vim.bo[b].buftype == "" and vim.bo[b].filetype ~= "NvimTree"
+  end
+  local cur = vim.api.nvim_get_current_win()
+  local target = editable(cur) and cur or nil
+  if not target then
+    local prev = vim.fn.win_getid(vim.fn.winnr("#"))
+    if prev ~= 0 and editable(prev) then target = prev end
+  end
+  if not target then
+    for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+      if editable(w) then target = w break end
+    end
+  end
+  if not target then
+    -- Only terminals and the tree on screen: give the file its own column on
+    -- the left, away from the harness on the right.
+    target = vim.api.nvim_open_win(0, false, { split = "left", win = -1 })
+  end
+  vim.api.nvim_win_call(target, function()
+    vim.cmd("edit " .. vim.fn.fnameescape(path))
+    if line and line > 0 then
+      vim.api.nvim_win_set_cursor(0, { math.min(line, vim.api.nvim_buf_line_count(0)), 0 })
+      vim.cmd("normal! zz")
+    end
+  end)
+  vim.cmd("redraw")
+  return vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(target))
+end)(_A[1], _A[2])
+"""
+
+TOOL = {
+    "name": "open_file",
+    "description": "Open a file in the user's nvim (native :edit) so they can see it. "
+    "Opens in the editor window, never the harness split, and leaves focus where it is.",
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "path": {"type": "string", "description": "File to open; relative paths resolve against the harness's cwd."},
+            "line": {"type": "integer", "description": "Optional 1-based line to put the cursor on."},
+        },
+        "required": ["path"],
+    },
+}
+
+
+def remote_expr(server, expr):
+    out = subprocess.run(
+        ["nvim", "--server", server, "--remote-expr", expr],
+        capture_output=True, text=True, timeout=5,
+    )
+    # A failed connect prints E247 but still exits 0 (and evaluates locally).
+    if out.returncode != 0 or "E247" in out.stderr:
+        raise RuntimeError(out.stderr.strip() or f"nvim exited {out.returncode}")
+    return out.stdout.strip()
+
+
+def find_server(path):
+    # Started from inside an nvim: that nvim or nothing. Falling back would open
+    # the file in some other instance the user isn't looking at.
+    env = os.environ.get("NVIM")
+    if env:
+        return env
+    pattern = os.path.join(tempfile.gettempdir(), f"nvim.{os.environ.get('USER', '')}", "*", "nvim.*.0")
+    best, best_len = None, -1
+    for sock in glob.glob(pattern):
+        try:
+            uis, cwd = remote_expr(sock, 'len(nvim_list_uis()) . "\n" . getcwd()').split("\n", 1)
+        except Exception:
+            continue
+        if uis == "0":
+            continue  # headless/embedded leftovers: nobody would see the file
+        score = len(cwd) if (path + os.sep).startswith(cwd.rstrip(os.sep) + os.sep) else 0
+        if score > best_len:
+            best, best_len = sock, score
+    if not best:
+        raise RuntimeError("no running nvim with a UI found ($NVIM is unset)")
+    return best
+
+
+def open_file(args):
+    path = os.path.abspath(os.path.expanduser(args["path"]))
+    line = int(args.get("line") or 0)
+    server = find_server(path)
+    # JSON strings are valid Vim double-quoted strings.
+    opened = remote_expr(server, f"luaeval({json.dumps(OPEN_LUA)}, [{json.dumps(path)}, {line}])")
+    return f"opened {opened}" + (f":{line}" if line else "")
+
+
+def handle(msg):
+    method = msg.get("method")
+    if method == "initialize":
+        return {
+            "protocolVersion": msg.get("params", {}).get("protocolVersion", "2025-06-18"),
+            "capabilities": {"tools": {}},
+            "serverInfo": {"name": "editor-mcp", "version": "1.0.0"},
+        }
+    if method == "ping":
+        return {}
+    if method == "tools/list":
+        return {"tools": [TOOL]}
+    if method == "tools/call":
+        params = msg.get("params", {})
+        if params.get("name") != "open_file":
+            raise KeyError(f"unknown tool {params.get('name')}")
+        try:
+            text, err = open_file(params.get("arguments", {})), False
+        except Exception as e:  # report to the model, not as a protocol error
+            text, err = f"open_file failed: {e}", True
+        return {"content": [{"type": "text", "text": text}], "isError": err}
+    raise KeyError(f"method not found: {method}")
+
+
+def main():
+    for raw in sys.stdin:
+        if not raw.strip():
+            continue
+        msg = json.loads(raw)
+        if "id" not in msg:
+            continue  # notifications (initialized, cancelled, ...)
+        try:
+            reply = {"jsonrpc": "2.0", "id": msg["id"], "result": handle(msg)}
+        except KeyError as e:
+            reply = {"jsonrpc": "2.0", "id": msg["id"], "error": {"code": -32601, "message": str(e)}}
+        sys.stdout.write(json.dumps(reply) + "\n")
+        sys.stdout.flush()
+
+
+if __name__ == "__main__":
+    main()
