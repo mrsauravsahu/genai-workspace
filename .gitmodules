@@ -42,3 +42,8 @@
 	url = git@github.com:anthropics/skills.git
 	shallow = true
 	fridaySymlink = skills/canvas-design
+[submodule ".friday/vendor/stack-diagram"]
+	path = .friday/vendor/stack-diagram
+	url = git@github.com:caru-ini/stack-diagram.git
+	shallow = true
+	fridaySymlink = skills/stack-diagram
