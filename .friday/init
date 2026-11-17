@@ -224,6 +224,10 @@ if ask "Codex CLI / OpenCode?"; then
   TRANSLATE+=("OpenCode (.opencode/opencode.json)")
 fi
 
+if ask "Hermes Agent?"; then
+  link ".friday/rules.md" "AGENTS.md"
+fi
+
 echo
 echo "done. bootstrap complete."
 
