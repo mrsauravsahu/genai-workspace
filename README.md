@@ -30,6 +30,8 @@ With `openHarnessInEditor` and `nvim`, `gw` opens one tmux pane and nvim runs th
 
 `.friday/` holds everything shared across harnesses (rules, MCP config, skills, commands) in one place instead of scattered across `.claude/`, `.opencode/`, `.cursor/`, etc. Each harness reads from its own path, so `.friday/init` symlinks the canonical files into place.
 
+Architecture diagram: [docs/genai-workspace-diagram.html](docs/genai-workspace-diagram.html) (open locally in a browser).
+
 ### Why "friday"?
 
 The name is borrowed from Friday, a separate private project: a self-hosted personal AI system — a homelab stack of GenAI tools, content pipelines, and experiments, all running on your own hardware with no cloud dependency by default. It's a nod to Tony Stark's AI assistant F.R.I.D.A.Y. (Female Replacement Intelligent Digital Assistant Youth), the successor to J.A.R.V.I.S. — an always-available, locally-running intelligence that handles the repetitive and creative work so you can focus on what matters.
